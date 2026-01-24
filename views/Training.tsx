@@ -15,8 +15,10 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
   const [showSuccess, setShowSuccess] = useState(false);
 
   const addService = () => {
+    // Fix: Added required 'tenantId' property from config.id to match the Service interface
     const newService: Service = {
       id: Date.now().toString(),
+      tenantId: config.id,
       name: '',
       price: 0,
       duration: 30
