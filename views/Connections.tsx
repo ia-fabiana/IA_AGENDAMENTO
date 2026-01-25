@@ -1,278 +1,305 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Smartphone, 
-  CheckCircle, 
-  RefreshCcw, 
   QrCode, 
   X, 
   Loader2, 
   Terminal,
   Zap,
-  Power,
   ShieldCheck,
   SmartphoneIcon,
   PlusCircle,
-  MoreVertical,
-  LogOut
+  LogOut,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+  ExternalLink,
+  Users
 } from 'lucide-react';
-import { evolutionService } from '../services/evolutionService';
+// Import EVOLUTION_API_URL to fix reference error in CORS authorization button
+import { evolutionService, EVOLUTION_API_URL } from '../services/evolutionService';
 import { Instance } from '../types';
 
 interface ConnectionsProps {
+  tenantId: string;
+  businessName: string;
   isConnected: boolean;
   onConnectionChange: (connected: boolean) => void;
 }
 
-const Connections: React.FC<ConnectionsProps> = ({ isConnected, onConnectionChange }) => {
+const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isConnected, onConnectionChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [errorType, setErrorType] = useState<null | 'CORS' | 'GENERIC'>(null);
+  const [showSuccessCheck, setShowSuccessCheck] = useState(false);
+  const qrPollInterval = useRef<any>(null);
   
-  // Simulação de Instância do Tenant (Vindo do "Supabase")
+  // Nome único da instância para este cliente
+  const instanceName = evolutionService.formatInstanceName(tenantId);
+
   const [instance, setInstance] = useState<Instance | null>(
     isConnected ? {
-      id: 'inst_1',
-      tenant_id: 'shine-123',
-      instance_name: 'estudio-shine-main',
-      evolution_token: 'tok_abc123',
+      id: instanceName,
+      tenant_id: tenantId,
+      instance_name: instanceName,
+      evolution_token: 'existing',
       status_conexao: 'connected',
-      whatsapp_number: '5511999998888'
     } : null
   );
 
-  const addLog = (msg: string) => setLogs(p => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...p].slice(0, 5));
+  const addLog = (msg: string) => setLogs(p => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...p].slice(0, 10));
 
   const handleCreateInstance = async () => {
+    setIsModalOpen(true);
     setLoading(true);
-    addLog("Iniciando criação de instância na Evolution API...");
+    setQrCode(null);
+    setErrorType(null);
+    addLog(`Sincronizando cliente: ${businessName}`);
+    
     try {
-      const newInst = await evolutionService.createInstance('shine-123', 'estudio-shine-main');
+      const newInst = await evolutionService.createInstance(tenantId);
       setInstance(newInst);
-      const qr = await evolutionService.getQRCode(newInst.instance_name);
+      
+      // Verifica se já está conectado antes de pedir QR
+      const check = await evolutionService.validateHandshake(instanceName);
+      if (check.connected) {
+        handleSuccessConnection(check.number);
+        return;
+      }
+
+      addLog("Gerando QR Code único para esta conta...");
+      await new Promise(r => setTimeout(r, 2000));
+      
+      const qr = await evolutionService.getQRCode(instanceName);
       setQrCode(qr);
-      setIsModalOpen(true);
-      addLog("QR Code gerado. Aguardando leitura...");
-    } catch (e) {
-      addLog("Erro ao criar instância.");
+      addLog("QR Code pronto para leitura.");
+
+      startPolling(instanceName);
+    } catch (e: any) {
+      if (e.message === "BLOCK_CORS") {
+        setErrorType('CORS');
+        addLog("BLOQUEIO: Navegador impediu conexão com IP de cluster.");
+      } else {
+        setErrorType('GENERIC');
+        addLog(`ERRO API: ${e.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const simulateSuccess = () => {
-    if (instance) {
-      setInstance({ ...instance, status_conexao: 'connected', whatsapp_number: '5511999998888' });
+  const startPolling = (name: string) => {
+    if (qrPollInterval.current) clearInterval(qrPollInterval.current);
+    qrPollInterval.current = setInterval(async () => {
+      const res = await evolutionService.validateHandshake(name);
+      if (res.connected) {
+        clearInterval(qrPollInterval.current);
+        handleSuccessConnection(res.number);
+      }
+    }, 5000);
+  };
+
+  const handleSuccessConnection = (number?: string) => {
+    setShowSuccessCheck(true);
+    addLog(`WhatsApp ${number || ''} vinculado ao Tenant!`);
+    setTimeout(() => {
+      setInstance(prev => prev ? { 
+        ...prev, 
+        status_conexao: 'connected',
+        whatsapp_number: number 
+      } : null);
       onConnectionChange(true);
       setIsModalOpen(false);
-      addLog("WhatsApp Conectado com Sucesso!");
-    }
+      setShowSuccessCheck(false);
+    }, 2000);
   };
 
   const handleLogout = async () => {
     if (instance) {
-      addLog("Finalizando sessão...");
+      addLog("Removendo vínculo do dispositivo...");
       await evolutionService.logoutInstance(instance.instance_name);
       setInstance(null);
       onConnectionChange(false);
-      addLog("Instância removida.");
+      if (qrPollInterval.current) clearInterval(qrPollInterval.current);
     }
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
-      {/* SaaS Infrastructure Header */}
-      <div className="bg-brand-dark p-8 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-5">
-           <Zap className="w-40 h-40" />
+      <div className="bg-brand-dark p-10 rounded-[3rem] text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+           <Users className="w-48 h-48 text-brand-purple" />
         </div>
-        <div className="relative z-10">
-          <h2 className="text-2xl font-black mb-2 uppercase tracking-tighter">Gateway WhatsApp</h2>
-          <p className="text-xs text-slate-400 font-medium max-w-md leading-relaxed">
-            Gerencie sua conexão oficial com a Evolution API. Sua instância é isolada e criptografada para máxima segurança dos seus dados.
-          </p>
+        <div className="relative z-10 space-y-2">
+          <p className="text-[10px] text-brand-purple font-black uppercase tracking-[0.3em]">Ambiente SaaS Multitenant</p>
+          <h2 className="text-3xl font-black uppercase tracking-tighter text-white">Gestão de Conectividade</h2>
+          <div className="flex items-center gap-2 mt-2">
+             <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-bold text-slate-300 uppercase tracking-widest border border-white/5">
+                ID: {tenantId.substring(0, 8)}...
+             </div>
+             <div className="px-3 py-1 bg-brand-purple/20 rounded-lg text-[9px] font-bold text-brand-purple uppercase tracking-widest border border-brand-purple/20">
+                {businessName}
+             </div>
+          </div>
         </div>
-        <div className="flex gap-4 relative z-10">
-           <div className="px-6 py-3 bg-white/5 rounded-2xl border border-white/10 text-center">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">Status Global</p>
-              <div className="flex items-center gap-2 text-brand-green font-bold text-sm">
-                <ShieldCheck className="w-4 h-4" /> Servidor OK
-              </div>
-           </div>
+        <div className="px-8 py-4 bg-white/5 rounded-3xl border border-white/10 text-center backdrop-blur-md relative z-10">
+          <div className="flex items-center gap-2 text-brand-green font-black text-[10px] uppercase tracking-widest">
+            <ShieldCheck className="w-4 h-4" /> Cluster Ativo
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Main Connection Panel */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8 flex flex-col min-h-[500px]">
+        <div className="lg:col-span-2 bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm space-y-10 flex flex-col min-h-[500px]">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-brand-dark flex items-center gap-2">
-              <SmartphoneIcon className="w-5 h-5 text-brand-purple" /> Suas Instâncias
+            <h3 className="text-xl font-black text-brand-dark uppercase tracking-tighter flex items-center gap-3">
+              <SmartphoneIcon className="w-6 h-6 text-brand-purple" /> Sua Instância Exclusiva
             </h3>
             {!instance && (
               <button 
                 onClick={handleCreateInstance}
-                disabled={loading}
-                className="bg-brand-purple text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-brand-purple/20 hover:scale-105 transition-all"
+                className="bg-brand-purple text-white px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-brand-purple/20 hover:scale-105 transition-all"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
-                Nova Instância
+                <PlusCircle className="w-4 h-4" /> Conectar WhatsApp
               </button>
             )}
           </div>
 
           {!instance ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
-              <div className="w-24 h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] flex items-center justify-center text-slate-300">
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-10 bg-slate-50/50 rounded-[3rem] border-2 border-dashed border-slate-100">
+              <div className="w-20 h-20 bg-white border border-slate-200 rounded-3xl flex items-center justify-center text-slate-200 mb-6 shadow-sm">
                 <QrCode className="w-10 h-10" />
               </div>
-              <div>
-                <h4 className="font-bold text-brand-dark">Nenhuma conexão ativa</h4>
-                <p className="text-xs text-slate-500 mt-1">Crie uma instância para começar a automatizar seu WhatsApp.</p>
-              </div>
+              <h4 className="font-black text-brand-dark uppercase text-sm">Pronto para nova conexão</h4>
+              <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest">Cada cliente possui seu próprio túnel de comunicação isolado.</p>
             </div>
           ) : (
-            <div className="space-y-6">
-               <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${instance.status_conexao === 'connected' ? 'bg-brand-green text-white' : 'bg-slate-200 text-slate-400'}`}>
-                      <Smartphone className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-brand-dark text-sm uppercase tracking-tighter">{instance.instance_name}</h4>
-                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{instance.whatsapp_number || 'Aguardando pareamento...'}</p>
-                    </div>
+            <div className="space-y-6 animate-in slide-in-from-bottom-4">
+              <div className="p-8 bg-slate-50 border border-slate-200 rounded-[2.5rem] flex items-center justify-between shadow-inner">
+                <div className="flex items-center gap-6">
+                  <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-xl ${instance.status_conexao === 'connected' ? 'bg-brand-green text-white shadow-brand-green/20' : 'bg-slate-200 text-slate-400'}`}>
+                    <Smartphone className="w-8 h-8" />
                   </div>
-                  <div className="flex items-center gap-4">
-                     <div className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${instance.status_conexao === 'connected' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-amber-100 text-amber-600 border-amber-200'}`}>
-                        {instance.status_conexao === 'connected' ? 'CONECTADO' : 'AGUARDANDO QR'}
-                     </div>
-                     <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
-                        <LogOut className="w-5 h-5" />
-                     </button>
+                  <div>
+                    <h4 className="font-black text-brand-dark uppercase tracking-tighter">{instance.instance_name}</h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                       {instance.whatsapp_number ? `Vinculado: ${instance.whatsapp_number}` : 'Sincronizando número...'}
+                    </p>
                   </div>
-               </div>
-               
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Evolution Token</p>
-                    <p className="text-[10px] font-mono text-brand-purple truncate">{instance.evolution_token}</p>
-                  </div>
-                  <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Mensagens / Dia</p>
-                    <p className="text-sm font-bold text-brand-dark">142</p>
-                  </div>
-               </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${instance.status_conexao === 'connected' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-amber-100 text-amber-600 border-amber-200 animate-pulse'}`}>
+                    {instance.status_conexao === 'connected' ? 'CONECTADO' : 'PENDENTE'}
+                  </span>
+                  <button onClick={handleLogout} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
+                      <LogOut className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-brand-purple/5 p-6 rounded-3xl border border-brand-purple/10 flex items-start gap-3">
+                 <Info className="w-5 h-5 text-brand-purple mt-0.5" />
+                 <p className="text-xs text-brand-purple/80 font-medium leading-relaxed">
+                   Esta instância é permanente para <strong>{businessName}</strong>. Caso o cliente troque de aparelho, ele deverá clicar em desconectar e gerar um novo código.
+                 </p>
+              </div>
             </div>
           )}
 
-          {/* Connection Logs */}
           <div className="mt-auto pt-8 border-t border-slate-100">
-             <div className="flex items-center gap-2 mb-3">
+             <div className="flex items-center gap-3 mb-4">
                 <Terminal className="w-4 h-4 text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Logs de Eventos</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logs do Túnel Evolution</span>
              </div>
-             <div className="bg-brand-dark rounded-2xl p-4 font-mono text-[10px] space-y-1.5 min-h-[100px]">
+             <div className="bg-brand-dark rounded-2xl p-5 font-mono text-[10px] space-y-1.5 h-32 overflow-y-auto shadow-inner scrollbar-hide">
                 {logs.length === 0 ? (
-                  <p className="text-slate-600 italic">Aguardando sinais do gateway...</p>
+                  <p className="text-slate-600 italic">Monitorando eventos de rede...</p>
                 ) : logs.map((log, i) => (
-                  <p key={i} className={i === 0 ? 'text-brand-purple' : 'text-slate-500'}>{log}</p>
+                  <p key={i} className={i === 0 ? 'text-brand-purple font-bold' : 'text-slate-500'}>{log}</p>
                 ))}
              </div>
           </div>
         </div>
 
-        {/* Bot Status & Settings */}
         <div className="space-y-6">
-           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
-              <h3 className="font-bold text-brand-dark flex items-center gap-2">
-                <Power className="w-5 h-5 text-brand-purple" /> Controle do Bot
+           <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm space-y-8">
+              <h3 className="font-black text-brand-dark uppercase text-sm flex items-center gap-2">
+                <Zap className="w-5 h-5 text-brand-purple" /> Sofia IA
               </h3>
-              
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                 <div>
-                   <p className="text-xs font-bold text-brand-dark">Ativação Mestra</p>
-                   <p className="text-[10px] text-slate-500 italic">Liga/Desliga IA no WhatsApp</p>
+              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
+                 <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-black text-brand-dark uppercase tracking-tighter">Status do Bot</p>
+                    <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-brand-green animate-pulse shadow-[0_0_8px_#4ABF4A]' : 'bg-slate-300'}`}></span>
                  </div>
-                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={isConnected} disabled={!isConnected} />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-green"></div>
-                 </label>
+                 <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed">
+                    Quando conectado, a IA Sofia responderá automaticamente todas as mensagens recebidas nesta instância.
+                 </p>
               </div>
-
-              <div className="space-y-4 pt-4 border-t border-slate-100">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Health Check</p>
-                 <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500 font-medium">Latência da API</span>
-                    <span className="text-brand-green font-bold">142ms</span>
-                 </div>
-                 <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500 font-medium">Uptime Instância</span>
-                    <span className="text-slate-400 font-bold">99.98%</span>
-                 </div>
-              </div>
-           </div>
-
-           <div className="bg-brand-purple p-8 rounded-[2.5rem] text-white shadow-xl shadow-brand-purple/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-20">
-                 <CheckCircle className="w-20 h-20" />
-              </div>
-              <h4 className="font-bold mb-2 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5" /> Webhook Security
-              </h4>
-              <p className="text-[11px] text-brand-purple/20 leading-relaxed font-medium">
-                Seu webhook foi gerado automaticamente. Todas as mensagens recebidas pela Evolution API são processadas pelo nosso orquestrador de IA com isolamento de tenant.
-              </p>
            </div>
         </div>
       </div>
 
-      {/* QR Code Modal */}
+      {/* MODAL DE QR CODE */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] bg-brand-dark/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl scale-in-center overflow-hidden relative">
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-brand-dark transition-colors"
-            >
-              <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-[100] bg-brand-dark/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[4rem] p-12 shadow-2xl relative animate-in zoom-in duration-300">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-10 right-10 text-slate-300 hover:text-brand-dark">
+              <X className="w-8 h-8" />
             </button>
             
-            <div className="text-center space-y-6">
-               <div className="inline-flex p-3 bg-brand-purple/10 text-brand-purple rounded-2xl mb-2">
-                 <QrCode className="w-8 h-8" />
+            <div className="text-center space-y-10">
+               <div className="space-y-4">
+                  <h3 className="text-3xl font-black text-brand-dark uppercase tracking-tighter leading-none">Vincular Cliente</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Negócio: {businessName}</p>
                </div>
-               <h3 className="text-xl font-black text-brand-dark uppercase tracking-tighter">Conectar WhatsApp</h3>
-               <p className="text-xs text-slate-500 max-w-xs mx-auto">Abra o WhatsApp no seu celular, vá em Aparelhos Conectados e escaneie o código abaixo.</p>
                
-               <div className="w-64 h-64 bg-slate-50 border-4 border-brand-purple/10 p-4 rounded-[2.5rem] mx-auto shadow-inner relative">
-                  <img src={qrCode || ''} className="w-full h-full" alt="QR Code Evolution" />
-                  <div className="absolute inset-0 bg-brand-purple/5 pointer-events-none rounded-[2.3rem] animate-pulse"></div>
+               <div className="relative w-64 h-64 mx-auto">
+                  <div className="w-full h-full bg-slate-50 border-[12px] border-slate-100 p-8 rounded-[3.5rem] shadow-inner flex items-center justify-center">
+                    {loading ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-10 h-10 text-brand-purple animate-spin" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Provisionando...</span>
+                      </div>
+                    ) : qrCode ? (
+                      <img src={qrCode} className="w-full h-full object-contain" alt="QR Code" />
+                    ) : errorType === 'CORS' ? (
+                      <div className="text-center space-y-4 px-2">
+                         <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
+                         <p className="text-[9px] font-black text-amber-600 uppercase leading-tight">Falha de Segurança: Clique abaixo para autorizar o cluster.</p>
+                         <button onClick={() => window.open(`${EVOLUTION_API_URL}`, '_blank')} className="text-[9px] font-black text-brand-purple underline flex items-center justify-center gap-1 mx-auto">
+                            AUTORIZAR ACESSO <ExternalLink className="w-3 h-3" />
+                         </button>
+                      </div>
+                    ) : (
+                      <div className="text-center p-4">
+                        <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                        <span className="text-[10px] font-black text-red-500 uppercase">Instância Offline.</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {showSuccessCheck && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-brand-green/10 backdrop-blur-md rounded-[3.5rem] animate-in zoom-in">
+                       <CheckCircle2 className="w-24 h-24 text-brand-green" />
+                       <span className="text-sm font-black text-brand-green uppercase mt-4 tracking-[0.2em]">SINCRO OK!</span>
+                    </div>
+                  )}
                </div>
 
-               <div className="pt-4 space-y-3">
-                  <button 
-                    onClick={simulateSuccess}
-                    className="w-full bg-brand-purple text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-purple/30 hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    Simular Leitura (Ok)
-                  </button>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase flex items-center justify-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Aguardando Webhook do Gateway...
-                  </p>
+               <div className="pt-4">
+                  <div className="flex items-center justify-center gap-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    <span className={`w-2.5 h-2.5 rounded-full animate-ping ${loading ? 'bg-amber-500' : 'bg-brand-green'}`}></span>
+                    {loading ? 'Buscando Dados...' : 'Aguardando Sincronia Celular...'}
+                  </div>
                </div>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        .scale-in-center { animation: scale-in-center 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; }
-        @keyframes scale-in-center { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-      `}</style>
     </div>
   );
 };

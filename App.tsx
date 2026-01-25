@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-// Added missing Loader2 import from lucide-react
 import { Loader2 } from 'lucide-react';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
@@ -24,12 +23,24 @@ const App: React.FC = () => {
   const currentTenantId = '550e8400-e29b-41d4-a716-446655440000';
 
   const [credits, setCredits] = useState<UserCredits>({
-    balance: 0, totalLimit: 1000, planName: 'Bronze', usageThisMonth: 0, tokensTotal: 0
+    balance: 150, 
+    totalLimit: 1000, 
+    planName: 'Prata', 
+    usageThisMonth: 0, 
+    tokensTotal: 0
   });
 
   const [aiConfig, setAiConfig] = useState<AIConfig>({
-    id: '', tenantId: currentTenantId, provider: 'gemini', model: 'gemini-3-flash-preview',
-    temperature: 0.7, maxTokens: 2048, name: 'Sofia', behavior: '', useMasterKey: true, botActive: true
+    id: 'Sofia_Agente', 
+    tenantId: currentTenantId, 
+    provider: 'gemini', 
+    model: 'gemini-3-flash-preview',
+    temperature: 0.7, 
+    maxTokens: 2048, 
+    name: 'Sofia', 
+    behavior: 'Você é um assistente profissional da Estúdio Shine. Seu tom de voz é elegante e prestativo.', 
+    useMasterKey: true, 
+    botActive: true
   });
 
   const [appointments, setAppointments] = useState<Appointment[]>([
@@ -45,45 +56,50 @@ const App: React.FC = () => {
     id: currentTenantId, name: 'Estúdio Shine', address: 'Av. Paulista, 1000 - São Paulo',
     mapsLink: 'https://goo.gl/maps/shine', openingHours: 'Seg a Sáb, 08h-20h',
     cancellationPolicy: 'Aviso prévio 2h', minAdvanceTime: 2,
-    promotion: { enabled: true, description: '20% OFF!', callToAction: 'Agendar?', imageData: '' }
+    promotion: { enabled: true, description: '20% OFF na primeira visita!', callToAction: 'Gostaria de agendar agora?', imageData: '' }
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const { data: tenant } = await supabase.from('tenants').select('*').eq('id', currentTenantId).single();
-        if (tenant) { setCredits(p => ({ ...p, balance: tenant.saldo_creditos, planName: tenant.plano as any })); }
-
-        const { data: agente } = await supabase.from('agentes').select('*').eq('tenant_id', currentTenantId).single();
-        if (agente) {
-          setAiConfig({
-            id: agente.id, tenantId: agente.tenant_id, provider: agente.provider as any,
-            model: agente.model, temperature: agente.temperature, maxTokens: agente.max_tokens,
-            name: agente.nome_agente, behavior: agente.system_prompt, botActive: agente.bot_active,
-            useMasterKey: true
-          });
-        }
-      } catch (err) { console.error("Supabase Error:", err); }
-      finally { setIsLoading(false); }
-    };
-    fetchData();
-  }, [currentTenantId]);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleNewAppointment = (apt: Appointment) => {
     setAppointments(prev => [apt, ...prev]);
   };
 
   const renderContent = () => {
-    if (isLoading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
+    if (isLoading) return <div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-brand-purple w-10 h-10" /></div>;
 
     switch (activeRoute) {
       case AppRoute.DASHBOARD: return <Dashboard credits={credits} />;
       case AppRoute.AGENTS: return <Agents config={aiConfig} onSave={setAiConfig} credits={credits} />;
       case AppRoute.APPOINTMENTS: return <Appointments appointments={appointments} />;
       case AppRoute.TRAINING: return <Training config={config} setConfig={setConfig} services={services} setServices={setServices} />;
-      case AppRoute.CONNECTIONS: return <Connections isConnected={isWaConnected} onConnectionChange={setIsWaConnected} />;
-      case AppRoute.CHAT_DEMO: return <ChatSimulation config={config} services={services} appointments={appointments} aiConfig={aiConfig} credits={credits} setCredits={setCredits} onNewAppointment={handleNewAppointment} />;
+      case AppRoute.CONNECTIONS: 
+        return (
+          <Connections 
+            tenantId={currentTenantId} 
+            businessName={config.name} 
+            isConnected={isWaConnected} 
+            onConnectionChange={setIsWaConnected} 
+          />
+        );
+      case AppRoute.CHAT_DEMO: 
+        return (
+          <ChatSimulation 
+            config={config} 
+            services={services} 
+            appointments={appointments} 
+            aiConfig={aiConfig} 
+            credits={credits} 
+            setCredits={setCredits} 
+            onNewAppointment={handleNewAppointment} 
+            onNavigate={setActiveRoute}
+          />
+        );
       case AppRoute.PLAN_AND_CREDITS: return <PlanAndCredits credits={credits} setCredits={setCredits} onNavigate={setActiveRoute} />;
       case AppRoute.ADMIN: return <AdminDashboard />;
       default: return <Dashboard credits={credits} />;

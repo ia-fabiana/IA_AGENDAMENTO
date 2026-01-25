@@ -2,16 +2,16 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { BusinessConfig, Service, Appointment, AIConfig } from "../types";
 
-// Ferramentas que a IA pode "invocar" durante a conversa
+// Definição das ferramentas de agendamento que a IA pode "invocar"
 const bookingTools: FunctionDeclaration[] = [
   {
     name: "get_services",
-    description: "Retorna a lista de serviços, preços e durações oferecidos pelo estúdio.",
+    description: "Retorna a lista de serviços, preços e durações oferecidos pelo estabelecimento.",
     parameters: { type: Type.OBJECT, properties: {} }
   },
   {
     name: "check_availability",
-    description: "Verifica se uma data e hora específica está livre na agenda do estabelecimento.",
+    description: "Verifica se uma data e hora específica está livre na agenda.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -22,7 +22,7 @@ const bookingTools: FunctionDeclaration[] = [
   },
   {
     name: "book_appointment",
-    description: "Cria um agendamento oficial para o cliente após confirmação.",
+    description: "Cria um agendamento oficial para o cliente no sistema.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -50,60 +50,59 @@ export const getAIResponse = async (
 ): Promise<{ text: string, showPromotion: boolean, usage: { totalTokens: number }, functionCalls?: any[] }> => {
   
   if (!aiConfig.botActive) {
-    return { text: "[BOT DESATIVADO]", showPromotion: false, usage: { totalTokens: 0 } };
+    return { text: "[SISTEMA EM MANUTENÇÃO]", showPromotion: false, usage: { totalTokens: 0 } };
   }
 
-  // Inicialização obrigatória via objeto de configuração seguindo diretriz @google/genai
+  // Inicialização obrigatória via objeto de configuração conforme diretriz
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const systemInstruction = `
-    IDENTIDADE: Você é "${aiConfig.name}", a inteligência artificial da "${businessConfig.name}".
-    LOCAL: ${businessConfig.address}.
-    REGRAS DO NEGÓCIO: ${aiConfig.behavior || 'Seja prestativa e cordial.'}
-    POLÍTICA DE CANCELAMENTO: ${businessConfig.cancellationPolicy}
-    CLIENTE: ${whatsappPushname || 'Cliente'}
-
-    CAPACIDADES (TOOLS):
-    1. Para preços e serviços: use 'get_services'.
-    2. Antes de agendar: use 'check_availability'.
-    3. Para confirmar reserva: use 'book_appointment'.
-
-    MARKETING: Se o cliente hesitar, ofereça: "${businessConfig.promotion.description}". Use [SEND_PROMO_ART] no fim da fala para mostrar a imagem.
+    IDENTIDADE: Você é "${aiConfig.name}", assistente virtual de elite da "${businessConfig.name}".
+    LOCALIZAÇÃO: ${businessConfig.address}.
+    PERSONALIDADE: ${aiConfig.behavior || 'Cordial, eficiente e focada em converter conversas em agendamentos.'}
     
-    Responda em Português Brasileiro. Seja concisa mas empática.
+    PROTOCOLO DE AGENDAMENTO:
+    1. Se o cliente perguntar o que fazemos, use 'get_services'.
+    2. Antes de confirmar qualquer horário, use 'check_availability'.
+    3. Para finalizar a reserva, use 'book_appointment'.
+    
+    ESTRATÉGIA DE MARKETING:
+    Se o cliente hesitar, mencione a oferta: "${businessConfig.promotion.description}". Use [SEND_PROMO_ART] no final se sentir que uma imagem ajudará a fechar o agendamento.
+    
+    IMPORTANTE: Responda sempre em Português (PT-BR). Seja breve no WhatsApp.
   `;
 
   try {
-    // Seleção dinâmica: agendamento exige raciocínio complexo (Pro), papo reto usa Flash
-    const modelToUse = message.toLowerCase().includes('agend') || message.toLowerCase().includes('horário') 
-      ? 'gemini-3-pro-preview' 
-      : 'gemini-3-flash-preview';
+    // Escolha do modelo baseada na complexidade da tarefa
+    const isScheduling = /agendar|horário|disponibilidade|reserva/i.test(message);
+    const model = isScheduling ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
 
     const response = await ai.models.generateContent({
-      model: modelToUse,
+      model: model,
       contents: [...history, { role: 'user', parts: [{ text: message }] }],
       config: { 
         systemInstruction, 
         temperature: aiConfig.temperature,
-        tools: [{ functionDeclarations: bookingTools }]
+        tools: [{ functionDeclarations: bookingTools }],
+        // Adicionando thinking budget para o modelo Pro em tarefas de agendamento
+        ...(isScheduling ? { thinkingConfig: { thinkingBudget: 2000 } } : {})
       },
     });
 
-    // Acessando .text como propriedade conforme diretriz atual da SDK
+    // Acessando .text como propriedade conforme diretriz atualizada
     const responseText = response.text || "";
-    const functionCalls = response.functionCalls;
-    const totalTokens = Math.ceil((message.length + responseText.length) / 3.8);
+    const totalTokens = Math.ceil((message.length + responseText.length) / 3.5);
 
     return { 
       text: responseText.replace('[SEND_PROMO_ART]', '').trim(), 
       showPromotion: responseText.includes('[SEND_PROMO_ART]'),
       usage: { totalTokens },
-      functionCalls
+      functionCalls: response.functionCalls
     };
   } catch (error) {
-    console.error("AI SaaS Gateway Error:", error);
+    console.error("AI SaaS Engine Error:", error);
     return { 
-      text: "Tive um soluço no meu processador central. Pode repetir sua solicitação, por favor?", 
+      text: "Desculpe, tive um pequeno problema ao processar sua agenda. Pode repetir o horário desejado?", 
       showPromotion: false, 
       usage: { totalTokens: 0 } 
     };
