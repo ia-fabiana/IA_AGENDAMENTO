@@ -1,140 +1,193 @@
+// services/evolutionService.ts
+// Serviço para integração com Evolution API via Backend Proxy
 
-import { Instance } from '../types';
+const API_BASE = '/api/evolution'; // Proxy local (mesmo domínio)
+const INSTANCE_NAME = 'ia-agendamentos-main';
 
-/**
- * EVOLUTION API SERVICE - SaaS EDITION
- * Gerencia instâncias únicas por cliente (Tenant)
- */
+interface InstanceResponse {
+  instance: {
+    instanceName: string;
+    status: string;
+  };
+  hash?: {
+    apikey: string;
+  };
+  qrcode?: {
+    base64: string;
+  };
+}
 
-// ✅ CORREÇÃO: Usar variáveis de ambiente em vez de valores fixos
-export const EVOLUTION_API_URL = import.meta.env.VITE_EVOLUTION_API_URL || 'http://95.217.232.92:8080';
-const EVOLUTION_API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY || 'minha_chave_secreta_123';
+interface ConnectionStatusResponse {
+  instance: {
+    instanceName: string;
+    state: string;
+  };
+}
 
-export const evolutionService = {
-  formatInstanceName: (tenantId: string) => `ia_tenant_${tenantId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
+class EvolutionService {
+  private instanceName: string = INSTANCE_NAME;
 
-  // Cria ou recupera uma instância
-  createInstance: async (tenantId: string): Promise<Instance> => {
-    const instanceName = evolutionService.formatInstanceName(tenantId);
-    
+  /**
+   * Criar uma nova instância na Evolution API
+   */
+  async createInstance(): Promise<string> {
     try {
-      // ✅ CORREÇÃO: Usar proxy local em vez de URL externa
-      const response = await fetch(`/evolution-api/instance/create`, {
+      const response = await fetch(`${API_BASE}/instance/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': EVOLUTION_API_KEY
         },
         body: JSON.stringify({
-          instanceName: instanceName,
-          token: `tok_${tenantId.substring(0, 5)}`,
-          qrcode: true
+          instanceName: this.instanceName,
+          qrcode: true,
+          integration: 'WHATSAPP-BAILEYS'
         })
       });
 
-      const data = await response.json();
-      
-      // 403 ou 409 geralmente significa que a instância já existe
-      if (response.status === 403 || response.status === 409 || (data.message && data.message.includes('exists'))) {
-        return {
-          id: instanceName,
-          tenant_id: tenantId,
-          instance_name: instanceName,
-          evolution_token: 'existing',
-          status_conexao: 'connecting'
-        };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao criar instância');
       }
 
-      if (!response.ok) throw new Error(data.message || 'Erro ao processar instância');
-
-      return {
-        id: data.instance?.instanceId || instanceName,
-        tenant_id: tenantId,
-        instance_name: instanceName,
-        evolution_token: data.hash || data.token,
-        status_conexao: 'connecting'
-      };
+      const data: InstanceResponse = await response.json();
+      console.log('Instância criada:', data);
+      
+      return data.instance.instanceName;
     } catch (error: any) {
-      if (error.name === 'TypeError' || error.message.includes('fetch')) {
-        throw new Error("BLOCK_CORS");
-      }
-      throw error;
-    }
-  },
-
-  // Busca o QR Code com sistema de retries (tentativas)
-  getQRCode: async (instanceName: string, retries = 5): Promise<string> => {
-    let lastError = '';
-    
-    for (let i = 0; i < retries; i++) {
-      try {
-        // ✅ CORREÇÃO: Usar proxy local
-        const response = await fetch(`/evolution-api/instance/connect/${instanceName}`, {
-          method: 'GET',
-          headers: { 'apikey': EVOLUTION_API_KEY }
-        });
-
-        if (!response.ok) {
-          const err = await response.json();
-          lastError = err.message || 'Erro na API';
-          await new Promise(r => setTimeout(r, 2000)); // Aguarda 2s antes de tentar de novo
-          continue;
-        }
-
-        const data = await response.json();
-        // A Evolution API pode retornar o base64 em diferentes campos dependendo da versão
-        const base64String = data.base64 || data.code?.base64 || data.qrcode?.base64;
-        
-        if (base64String) {
-          return base64String.startsWith('data:image') 
-            ? base64String 
-            : `data:image/png;base64,${base64String}`;
-        }
-        
-        lastError = 'QR Code ainda sendo gerado pelo servidor...';
-        await new Promise(r => setTimeout(r, 2000));
-      } catch (e: any) {
-        lastError = e.message;
-        await new Promise(r => setTimeout(r, 2000));
-      }
-    }
-
-    throw new Error(lastError || 'Não foi possível obter o QR Code após várias tentativas.');
-  },
-
-  // Verifica o estado real no WhatsApp
-  validateHandshake: async (instanceName: string): Promise<{connected: boolean, number?: string}> => {
-    try {
-      // ✅ CORREÇÃO: Usar proxy local
-      const response = await fetch(`/evolution-api/instance/connectionState/${instanceName}`, {
-        method: 'GET',
-        headers: { 'apikey': EVOLUTION_API_KEY }
-      });
-      const data = await response.json();
-      
-      // Verifica múltiplos caminhos de resposta possíveis
-      const state = data.instance?.state || data.state || data.status;
-      const isOpen = state === 'open' || state === 'CONNECTED';
-      
-      return { 
-        connected: isOpen, 
-        number: data.instance?.ownerJid || data.instance?.number || data.number 
-      };
-    } catch {
-      return { connected: false };
-    }
-  },
-
-  logoutInstance: async (instanceName: string): Promise<boolean> => {
-    try {
-      // ✅ CORREÇÃO: Usar proxy local
-      await fetch(`/evolution-api/instance/logout/${instanceName}`, {
-        method: 'DELETE',
-        headers: { 'apikey': EVOLUTION_API_KEY }
-      });
-      return true;
-    } catch {
-      return false;
+      console.error('Erro ao criar instância:', error);
+      throw new Error(error.message || 'Erro ao criar instância');
     }
   }
-};
+
+  /**
+   * Gerar QR Code para conexão do WhatsApp
+   */
+  async generateQRCode(): Promise<string> {
+    try {
+      // Primeiro, tentar conectar à instância existente
+      const connectResponse = await fetch(`${API_BASE}/instance/connect/${this.instanceName}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!connectResponse.ok) {
+        // Se a instância não existir, criar uma nova
+        console.log('Instância não existe, criando nova...');
+        await this.createInstance();
+        
+        // Tentar conectar novamente
+        const retryResponse = await fetch(`${API_BASE}/instance/connect/${this.instanceName}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!retryResponse.ok) {
+          throw new Error('Erro ao conectar após criar instância');
+        }
+
+        const retryData: InstanceResponse = await retryResponse.json();
+        if (!retryData.qrcode?.base64) {
+          throw new Error('QR Code não gerado');
+        }
+
+        return retryData.qrcode.base64;
+      }
+
+      const data: InstanceResponse = await connectResponse.json();
+      
+      if (!data.qrcode?.base64) {
+        throw new Error('QR Code não disponível');
+      }
+
+      return data.qrcode.base64;
+    } catch (error: any) {
+      console.error('Erro ao gerar QR Code:', error);
+      throw new Error(error.message || 'Erro ao gerar QR Code');
+    }
+  }
+
+  /**
+   * Verificar status da conexão
+   */
+  async getConnectionStatus(): Promise<{ state: string; instanceName: string }> {
+    try {
+      const response = await fetch(`${API_BASE}/instance/connectionState/${this.instanceName}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        return { state: 'close', instanceName: this.instanceName };
+      }
+
+      const data: ConnectionStatusResponse = await response.json();
+      
+      return {
+        state: data.instance.state,
+        instanceName: data.instance.instanceName
+      };
+    } catch (error) {
+      console.error('Erro ao verificar status:', error);
+      return { state: 'close', instanceName: this.instanceName };
+    }
+  }
+
+  /**
+   * Desconectar instância
+   */
+  async disconnect(): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE}/instance/logout/${this.instanceName}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao desconectar');
+      }
+
+      console.log('Instância desconectada com sucesso');
+    } catch (error: any) {
+      console.error('Erro ao desconectar:', error);
+      throw new Error(error.message || 'Erro ao desconectar');
+    }
+  }
+
+  /**
+   * Enviar mensagem via WhatsApp
+   */
+  async sendMessage(phoneNumber: string, message: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE}/message/sendText/${this.instanceName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          number: phoneNumber,
+          text: message
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao enviar mensagem');
+      }
+
+      console.log('Mensagem enviada com sucesso');
+    } catch (error: any) {
+      console.error('Erro ao enviar mensagem:', error);
+      throw new Error(error.message || 'Erro ao enviar mensagem');
+    }
+  }
+}
+
+export const evolutionService = new EvolutionService();

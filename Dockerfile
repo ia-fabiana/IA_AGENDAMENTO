@@ -1,31 +1,38 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Dockerfile para IA.AGENDAMENTOS com Backend Proxy
+
+# Stage 1: Build do Frontend
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
 
-# Copy package files
+# Copiar package.json e instalar dependências
 COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+# Copiar código fonte e buildar
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Stage 2: Backend + Frontend buildado
+FROM node:22-alpine
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Instalar dependências do backend
+RUN npm install express cors axios
 
-# Expose port 8080 (Cloud Run default)
+# Copiar servidor backend
+COPY server.js ./
+
+# Copiar build do frontend do stage anterior
+COPY --from=frontend-builder /app/dist ./dist
+
+# Expor porta
 EXPOSE 8080
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Variáveis de ambiente (serão sobrescritas pelo Cloud Run)
+ENV PORT=8080
+ENV NODE_ENV=production
+
+# Iniciar servidor
+CMD ["node", "server.js"]
