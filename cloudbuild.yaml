@@ -1,3 +1,4 @@
+
 steps:
   # Step 1: Install dependencies
   - name: 'node:18'
@@ -11,6 +12,9 @@ steps:
     env:
       - 'VITE_SUPABASE_URL=${_SUPABASE_URL}'
       - 'VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
+      # ✅ CORREÇÃO: Adicionar variáveis da Evolution API
+      - 'VITE_EVOLUTION_API_URL=${_EVOLUTION_URL}'
+      - 'VITE_EVOLUTION_API_KEY=${_EVOLUTION_KEY}'
     
   # Step 3: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -42,22 +46,24 @@ steps:
       - 'us-central1'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'VITE_SUPABASE_URL=${_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
+      # ✅ CORREÇÃO: Adicionar variáveis da Evolution API no Cloud Run
+      - 'VITE_SUPABASE_URL=${_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},VITE_EVOLUTION_API_URL=${_EVOLUTION_URL},VITE_EVOLUTION_API_KEY=${_EVOLUTION_KEY}'
 
 # Images to be pushed to Container Registry
 images:
   - 'gcr.io/$PROJECT_ID/ia-agendamentos:$BUILD_ID'
   - 'gcr.io/$PROJECT_ID/ia-agendamentos:latest'
 
-# Substitution variables (will be provided by the trigger)
+# Substitution variables
 substitutions:
   _SUPABASE_URL: 'https://ztfnnzclwvycpbapbbhb.supabase.co'
   _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0Zm5uemNsd3Z5Y3BiYXBiYmhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyNjM5NjIsImV4cCI6MjA4NDgzOTk2Mn0.j2J1E6xOQw_qKV4vY-FP0U_-ImmBqAWbzWGZ5hhcR1g'
+  # ✅ CORREÇÃO: Adicionar valores padrão das variáveis da Evolution API
+  _EVOLUTION_URL: 'http://95.217.232.92:8080'
+  _EVOLUTION_KEY: 'minha_chave_secreta_123'
 
-# Timeout for the entire build
 timeout: 1200s
 
-# Options
 options:
   machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
