@@ -195,8 +195,12 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
                   <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${instance.status_conexao === 'connected' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-amber-100 text-amber-600 border-amber-200 animate-pulse'}`}>
                     {instance.status_conexao === 'connected' ? 'CONECTADO' : 'PENDENTE'}
                   </span>
-                  <button onClick={handleLogout} className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
-                      <LogOut className="w-6 h-6" />
+                  <button 
+                    onClick={handleLogout} 
+                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Desconectar
                   </button>
                 </div>
               </div>
