@@ -1,4 +1,3 @@
-
 import { Instance } from '../types';
 
 /**
@@ -6,13 +5,15 @@ import { Instance } from '../types';
  * Gerencia instâncias únicas por cliente (Tenant)
  */
 
-// Exported for use in UI components (e.g., Connections view for CORS authorization link)
-export const EVOLUTION_API_URL = 'http://95.217.232.92:8080';
-const EVOLUTION_API_KEY = 'minha_chave_secreta_123';
+// ✅ CORRIGIDO: URL HTTPS com SSL
+export const EVOLUTION_API_URL = 'https://api.iafabiana.com.br';
+
+// ✅ CORRIGIDO: API key real
+const EVOLUTION_API_KEY = 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J';
 
 export const evolutionService = {
   // Gera um nome de instância seguro baseado no Tenant ID
-  formatInstanceName: (tenantId: string) => `ia_tenant_${tenantId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
+  formatInstanceName: (tenantId: string ) => `ia_tenant_${tenantId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
 
   // Cria ou recupera uma instância para um cliente específico
   createInstance: async (tenantId: string): Promise<Instance> => {
