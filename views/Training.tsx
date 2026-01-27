@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, MapPin, Clock, Info, ShieldAlert, Navigation, Save, RotateCcw, CheckCircle2, Tag, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Plus, Trash2, MapPin, Clock, Info, ShieldAlert, Navigation, Save, RotateCcw, CheckCircle2, Tag, Image as ImageIcon, Sparkles, AlertCircle } from 'lucide-react';
 import { Service, BusinessConfig } from '../types';
+import { supabase } from '../services/supabase';
 
 interface TrainingProps {
   config: BusinessConfig;
@@ -13,6 +14,8 @@ interface TrainingProps {
 const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setServices }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const addService = () => {
     // Fix: Added required 'tenantId' property from config.id to match the Service interface
@@ -34,13 +37,33 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
     setServices(services.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
+    setShowError(false);
+    
+    try {
+      // Salvar tudo em localStorage por enquanto (solução temporária)
+      // TODO: Adicionar colunas no banco depois
+      const trainingData = {
+        config: config,
+        services: services,
+        lastSaved: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`training_data_${config.id}`, JSON.stringify(trainingData));
+      
+      // Sucesso!
       setIsSaving(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+      
+    } catch (error: any) {
+      console.error('Erro ao salvar:', error);
+      setIsSaving(false);
+      setShowError(true);
+      setErrorMessage(error.message || 'Erro ao salvar alterações');
+      setTimeout(() => setShowError(false), 5000);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,6 +92,11 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
            {showSuccess && (
              <span className="flex items-center gap-1.5 text-brand-green font-bold text-sm animate-in zoom-in duration-300">
                <CheckCircle2 className="w-4 h-4" /> Atualizado!
+             </span>
+           )}
+           {showError && (
+             <span className="flex items-center gap-1.5 text-red-600 font-bold text-sm animate-in zoom-in duration-300">
+               <AlertCircle className="w-4 h-4" /> {errorMessage}
              </span>
            )}
            <button 
