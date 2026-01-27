@@ -1,0 +1,41 @@
+From 7eacb443e16f7c95de5f77ff607993346629a573 Mon Sep 17 00:00:00 2001
+From: ia-fabiana <239424322+ia-fabiana@users.noreply.github.com>
+Date: Tue, 27 Jan 2026 05:57:01 -0500
+Subject: [PATCH] fix: atualizar API key do Evolution API
+
+---
+ cloudbuild.yaml              | 4 ++--
+ services/evolutionService.ts | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/cloudbuild.yaml b/cloudbuild.yaml
+index e7d6459..d57be91 100644
+--- a/cloudbuild.yaml
++++ b/cloudbuild.yaml
+@@ -55,8 +55,8 @@ images:
+ substitutions:
+   _SUPABASE_URL: 'https://ztfnnzclwvycpbapbbhb.supabase.co'
+   _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0Zm5uemNsd3Z5Y3BiYXBiYmhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyNjM5NjIsImV4cCI6MjA4NDgzOTk2Mn0.j2J1E6xOQw_qKV4vY-FP0U_-ImmBqAWbzWGZ5hhcR1g'
+-  _EVOLUTION_URL: 'http://95.217.232.92:8080'
+-  _EVOLUTION_KEY: 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'
++  _EVOLUTION_URL: 'https://api.iafabiana.com.br'
++  _EVOLUTION_KEY: 'minha_chave_secreta_123'
+ 
+ timeout: 1200s
+ 
+diff --git a/services/evolutionService.ts b/services/evolutionService.ts
+index f6fc4b3..39bc500 100644
+--- a/services/evolutionService.ts
++++ b/services/evolutionService.ts
+@@ -9,7 +9,7 @@ import { Instance } from '../types';
+ export const EVOLUTION_API_URL = 'https://api.iafabiana.com.br';
+ 
+ // ✅ CORRIGIDO: API key real
+-const EVOLUTION_API_KEY = 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J';
++const EVOLUTION_API_KEY = 'minha_chave_secreta_123';
+ 
+ export const evolutionService = {
+   // Gera um nome de instância seguro baseado no Tenant ID
+-- 
+2.34.1
+
