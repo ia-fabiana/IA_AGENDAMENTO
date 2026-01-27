@@ -26,7 +26,8 @@ class CalendarService {
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
-      prompt: 'consent' // Força mostrar tela de consentimento para obter refresh_token
+      prompt: 'consent', // Força mostrar tela de consentimento para obter refresh_token
+      response_type: 'code' // Parâmetro obrigatório para OAuth2
     });
   }
 
