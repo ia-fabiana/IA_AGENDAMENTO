@@ -3,6 +3,7 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { calendarService } from './services/calendarService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +28,172 @@ app.use((req, res, next) => {
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Google Calendar OAuth2 Routes
+app.get('/auth/google/calendar', (req, res) => {
+  try {
+    const authUrl = calendarService.getAuthUrl();
+    res.json({ authUrl });
+  } catch (error) {
+    console.error('Error generating auth URL:', error);
+    res.status(500).json({ error: 'Failed to generate auth URL' });
+  }
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).send('No authorization code received');
+    }
+
+    // Troca o código por tokens
+    const tokens = await calendarService.getTokensFromCode(code);
+    
+    // Aqui você deve salvar os tokens no Supabase associados ao tenant
+    // Por enquanto, vamos apenas retornar sucesso e fechar a janela
+    
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Autorização Concluída</title>
+        <style>
+          body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+          }
+          .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+          }
+          .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+          }
+          p {
+            margin: 0;
+            opacity: 0.9;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success-icon">✅</div>
+          <h1>Google Calendar Conectado!</h1>
+          <p>Você pode fechar esta janela.</p>
+        </div>
+        <script>
+          // Envia mensagem para a janela pai e fecha
+          if (window.opener) {
+            window.opener.postMessage({ type: 'GOOGLE_CALENDAR_CONNECTED', tokens: ${JSON.stringify(tokens)} }, '*');
+            setTimeout(() => window.close(), 2000);
+          }
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error in Google callback:', error);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Erro na Autorização</title>
+        <style>
+          body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+          }
+          .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+          }
+          .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+          }
+          p {
+            margin: 0;
+            opacity: 0.9;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="error-icon">❌</div>
+          <h1>Erro na Conexão</h1>
+          <p>Tente novamente mais tarde.</p>
+        </div>
+        <script>
+          setTimeout(() => window.close(), 3000);
+        </script>
+      </body>
+      </html>
+    `);
+  }
+});
+
+// API para listar eventos do calendário
+app.post('/api/calendar/events', async (req, res) => {
+  try {
+    const { tokens } = req.body;
+    
+    if (!tokens) {
+      return res.status(400).json({ error: 'Tokens required' });
+    }
+
+    const events = await calendarService.listEvents(tokens);
+    res.json({ events });
+  } catch (error) {
+    console.error('Error listing events:', error);
+    res.status(500).json({ error: 'Failed to list events' });
+  }
+});
+
+// API para criar evento
+app.post('/api/calendar/events/create', async (req, res) => {
+  try {
+    const { tokens, event } = req.body;
+    
+    if (!tokens || !event) {
+      return res.status(400).json({ error: 'Tokens and event required' });
+    }
+
+    const createdEvent = await calendarService.createEvent(tokens, event);
+    res.json({ event: createdEvent });
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
 });
 
 // Proxy para Evolution API

@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Info,
   ExternalLink,
-  Users
+  Users,
+  Calendar
 } from 'lucide-react';
 // Import EVOLUTION_API_URL to fix reference error in CORS authorization button
 import { evolutionService, EVOLUTION_API_URL } from '../services/evolutionService';
@@ -36,6 +37,8 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
   const [errorType, setErrorType] = useState<null | 'CORS' | 'GENERIC'>(null);
   const [showSuccessCheck, setShowSuccessCheck] = useState(false);
   const qrPollInterval = useRef<any>(null);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [calendarLoading, setCalendarLoading] = useState(false);
   
   // Nome único da instância para este cliente
   const instanceName = evolutionService.formatInstanceName(tenantId);
@@ -125,6 +128,57 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
       onConnectionChange(false);
       if (qrPollInterval.current) clearInterval(qrPollInterval.current);
     }
+  };
+
+  const handleConnectCalendar = async () => {
+    setCalendarLoading(true);
+    try {
+      // Busca URL de autorização do backend
+      const response = await fetch('/auth/google/calendar');
+      const data = await response.json();
+      
+      // Abre popup para autorização
+      const width = 600;
+      const height = 700;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      
+      const popup = window.open(
+        data.authUrl,
+        'Google Calendar Authorization',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      // Escuta mensagem do popup
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'GOOGLE_CALENDAR_CONNECTED') {
+          setCalendarConnected(true);
+          addLog('Google Calendar conectado com sucesso!');
+          // Aqui você deve salvar os tokens no Supabase
+          console.log('Calendar tokens:', event.data.tokens);
+          window.removeEventListener('message', handleMessage);
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+      
+      // Remove listener após 5 minutos
+      setTimeout(() => {
+        window.removeEventListener('message', handleMessage);
+      }, 300000);
+      
+    } catch (error) {
+      console.error('Error connecting calendar:', error);
+      addLog('Erro ao conectar Google Calendar');
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleDisconnectCalendar = () => {
+    setCalendarConnected(false);
+    addLog('Google Calendar desconectado');
+    // Aqui você deve remover os tokens do Supabase
   };
 
   return (
@@ -244,6 +298,51 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
                  <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed">
                     Quando conectado, a IA Sofia responderá automaticamente todas as mensagens recebidas nesta instância.
                  </p>
+              </div>
+           </div>
+
+           {/* Google Calendar */}
+           <div className="bg-white p-10 rounded-[3.5rem] border border-slate-200 shadow-sm space-y-8">
+              <h3 className="font-black text-brand-dark uppercase text-sm flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-500" /> Google Calendar
+              </h3>
+              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
+                 <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-black text-brand-dark uppercase tracking-tighter">Status da Sincronização</p>
+                    <span className={`w-2 h-2 rounded-full ${calendarConnected ? 'bg-brand-green animate-pulse shadow-[0_0_8px_#4ABF4A]' : 'bg-slate-300'}`}></span>
+                 </div>
+                 <p className="text-[10px] text-slate-400 font-bold uppercase leading-relaxed mb-6">
+                    {calendarConnected 
+                      ? 'Sua agenda Google está sincronizada. Agendamentos serão criados automaticamente.' 
+                      : 'Conecte sua conta Google para sincronizar agendamentos automaticamente.'}
+                 </p>
+                 {!calendarConnected ? (
+                   <button 
+                     onClick={handleConnectCalendar}
+                     disabled={calendarLoading}
+                     className="w-full bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                   >
+                     {calendarLoading ? (
+                       <>
+                         <Loader2 className="w-4 h-4 animate-spin" />
+                         Conectando...
+                       </>
+                     ) : (
+                       <>
+                         <Calendar className="w-4 h-4" />
+                         Conectar Google Calendar
+                       </>
+                     )}
+                   </button>
+                 ) : (
+                   <button 
+                     onClick={handleDisconnectCalendar}
+                     className="w-full bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
+                   >
+                     <LogOut className="w-4 h-4" />
+                     Desconectar Calendar
+                   </button>
+                 )}
               </div>
            </div>
         </div>
