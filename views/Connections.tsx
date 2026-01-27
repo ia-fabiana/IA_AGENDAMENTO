@@ -179,25 +179,27 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
             </div>
           ) : (
             <div className="space-y-6 animate-in slide-in-from-bottom-4">
-              <div className="p-8 bg-slate-50 border border-slate-200 rounded-[2.5rem] flex items-center justify-between shadow-inner">
-                <div className="flex items-center gap-6">
-                  <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-xl ${instance.status_conexao === 'connected' ? 'bg-brand-green text-white shadow-brand-green/20' : 'bg-slate-200 text-slate-400'}`}>
-                    <Smartphone className="w-8 h-8" />
+              <div className="p-8 bg-slate-50 border border-slate-200 rounded-[2.5rem] shadow-inner">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-6">
+                    <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-xl ${instance.status_conexao === 'connected' ? 'bg-brand-green text-white shadow-brand-green/20' : 'bg-slate-200 text-slate-400'}`}>
+                      <Smartphone className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-brand-dark uppercase tracking-tighter">{instance.instance_name}</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                         {instance.whatsapp_number ? `Vinculado: ${instance.whatsapp_number}` : 'Sincronizando número...'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-black text-brand-dark uppercase tracking-tighter">{instance.instance_name}</h4>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                       {instance.whatsapp_number ? `Vinculado: ${instance.whatsapp_number}` : 'Sincronizando número...'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
                   <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${instance.status_conexao === 'connected' ? 'bg-brand-green/10 text-brand-green border-brand-green/20' : 'bg-amber-100 text-amber-600 border-amber-200 animate-pulse'}`}>
                     {instance.status_conexao === 'connected' ? 'CONECTADO' : 'PENDENTE'}
                   </span>
+                </div>
+                <div className="flex justify-center">
                   <button 
                     onClick={handleLogout} 
-                    className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-red-500/20 hover:scale-105 transition-all"
+                    className="bg-red-500 hover:bg-red-600 text-white px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-red-500/20 hover:scale-105 transition-all z-50 relative"
                   >
                     <LogOut className="w-4 h-4" />
                     Desconectar
