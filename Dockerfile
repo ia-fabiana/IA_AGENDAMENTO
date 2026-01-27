@@ -25,8 +25,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 
-# Copiar servidor backend
+# Copiar servidor backend e services
 COPY server.js ./
+COPY services ./services
 
 # Copiar build do frontend
 COPY --from=builder /app/dist ./dist
