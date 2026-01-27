@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar as CalendarIcon, Clock, CheckCircle, RefreshCcw, ExternalLink, AlertCircle } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Appointment } from '../types';
 
 interface AppointmentsProps {
@@ -10,30 +10,6 @@ interface AppointmentsProps {
 const Appointments: React.FC<AppointmentsProps> = ({ appointments }) => {
   return (
     <div className="space-y-8">
-      {/* Header & Sync Status */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-brand-blue/10 text-brand-blue rounded-xl flex items-center justify-center">
-            <CalendarIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-brand-dark">Google Calendar</h3>
-            <p className="text-sm text-slate-500 flex items-center gap-1">
-              <CheckCircle className="w-3 h-3 text-brand-green" /> 
-              Sincronização ativa
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-all">
-            <RefreshCcw className="w-4 h-4" /> Forçar Sincronia
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-brand-blue rounded-xl hover:bg-brand-blue/90 transition-all shadow-md shadow-brand-blue/20">
-            Abrir Agenda Google <ExternalLink className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Appointments List */}
         <div className="lg:col-span-2 space-y-4">
@@ -82,22 +58,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ appointments }) => {
 
         {/* Calendar Insights */}
         <div className="space-y-6">
-          <div className="bg-brand-dark p-6 rounded-2xl text-white shadow-xl shadow-brand-dark/20 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-purple/20 rounded-full blur-2xl"></div>
-            <h4 className="font-bold flex items-center gap-2 mb-4">
-              <AlertCircle className="w-5 h-5 text-brand-purple" /> Configuração Google
-            </h4>
-            <div className="space-y-4 text-sm relative z-10">
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Agenda Conectada</p>
-                <p className="font-medium">agenda.negocio@gmail.com</p>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed italic">
-                "A IA verifica automaticamente esta agenda antes de sugerir horários para os clientes no WhatsApp."
-              </p>
-            </div>
-          </div>
-
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h4 className="font-bold text-brand-dark mb-4">Próximos Horários Livres</h4>
             <div className="space-y-2">
