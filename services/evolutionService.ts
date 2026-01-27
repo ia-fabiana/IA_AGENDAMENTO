@@ -9,7 +9,7 @@ import { Instance } from '../types';
 export const EVOLUTION_API_URL = 'https://api.iafabiana.com.br';
 
 // ✅ CORRIGIDO: API key real
-const EVOLUTION_API_KEY = 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J';
+const EVOLUTION_API_KEY = 'minha_chave_secreta_123';
 
 export const evolutionService = {
   // Gera um nome de instância seguro baseado no Tenant ID
