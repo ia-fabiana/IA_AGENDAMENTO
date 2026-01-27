@@ -230,9 +230,11 @@ app.all('/api/evolution/*', async (req, res) => {
 });
 
 // Servir arquivos estáticos do frontend (build do Vite)
+// IMPORTANTE: Isso deve vir DEPOIS de todas as rotas da API
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Todas as outras rotas retornam o index.html (SPA)
+// Esta rota catch-all deve ser a ÚLTIMA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
