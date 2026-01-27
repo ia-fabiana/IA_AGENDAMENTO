@@ -27,6 +27,7 @@ interface LayoutProps {
   businessName: string;
   userRole: 'admin' | 'user';
   onRoleSwitch: (role: 'admin' | 'user') => void;
+  onLogout?: () => void;
 }
 
 const Layout: React.FC<LayoutProps> = ({ 
@@ -38,7 +39,8 @@ const Layout: React.FC<LayoutProps> = ({
   credits,
   businessName,
   userRole,
-  onRoleSwitch
+  onRoleSwitch,
+  onLogout
 }) => {
   const menuItems = [
     { id: AppRoute.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
@@ -150,12 +152,17 @@ const Layout: React.FC<LayoutProps> = ({
            </button>
         </div>
 
-        <div className="p-4 border-t border-white/5">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 transition-colors font-bold text-xs uppercase tracking-widest">
-            <LogOut className="w-5 h-5" />
-            <span>Encerrar Sessão</span>
-          </button>
-        </div>
+        {onLogout && (
+          <div className="p-4 border-t border-white/5">
+            <button 
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:text-red-400 transition-colors font-bold text-xs uppercase tracking-widest"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Encerrar Sessão</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       <main className="flex-1 overflow-auto bg-[#F8FAFC]">

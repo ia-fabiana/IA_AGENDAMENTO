@@ -11,16 +11,38 @@ import Architecture from './views/Architecture';
 import Appointments from './views/Appointments';
 import PlanAndCredits from './views/PlanAndCredits';
 import AdminDashboard from './views/AdminDashboard';
+import TenantManagement from './views/TenantManagement';
+import Login from './views/Login';
 import { AppRoute, Service, BusinessConfig, Appointment, AIConfig, UserCredits } from './types';
 import { supabase } from './services/supabase';
+import { authService } from './services/authService';
+import { tenantService } from './services/tenantService';
 
 const App: React.FC = () => {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
   const [isWaConnected, setIsWaConnected] = useState(false);
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   
-  const currentTenantId = '550e8400-e29b-41d4-a716-446655440000';
+  // Ler tenant_id da URL ou usar padrão
+  const getTenantIdFromUrl = (): string => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tenantParam = urlParams.get('tenant');
+    
+    // Se tem tenant na URL, é um cliente acessando
+    if (tenantParam) {
+      setUserRole('user');
+      return tenantParam;
+    }
+    
+    // Se não tem tenant na URL, é admin
+    // Usar tenant padrão para compatibilidade
+    return '550e8400-e29b-41d4-a716-446655440000';
+  };
+
+  const currentTenantId = getTenantIdFromUrl();
 
   const [credits, setCredits] = useState<UserCredits>({
     balance: 150, 
@@ -59,6 +81,67 @@ const App: React.FC = () => {
     promotion: { enabled: true, description: '20% OFF na primeira visita!', callToAction: 'Gostaria de agendar agora?', imageData: '' }
   });
 
+  // Verificar autenticação ao carregar
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
+
+  const checkAuthentication = async () => {
+    setCheckingAuth(true);
+    
+    // Se tem tenant na URL, não precisa de autenticação (é um cliente)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tenant')) {
+      setIsAuthenticated(true);
+      setUserRole('user');
+      setCheckingAuth(false);
+      loadTenantData(urlParams.get('tenant')!);
+      return;
+    }
+
+    // Se não tem tenant na URL, precisa de autenticação (é admin)
+    const hasSession = await authService.hasActiveSession();
+    setIsAuthenticated(hasSession);
+    
+    if (hasSession) {
+      setUserRole('admin');
+      setActiveRoute(AppRoute.ADMIN);
+    }
+    
+    setCheckingAuth(false);
+  };
+
+  const loadTenantData = async (tenantId: string) => {
+    try {
+      const tenant = await tenantService.getTenant(tenantId);
+      if (tenant) {
+        setCredits({
+          balance: tenant.saldo_creditos,
+          totalLimit: 1000,
+          planName: tenant.plano,
+          usageThisMonth: 0,
+          tokensTotal: 0,
+        });
+        setConfig(prev => ({ ...prev, name: tenant.nome_negocio }));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do tenant:', error);
+    }
+  };
+
+  const handleLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setUserRole('admin');
+    setActiveRoute(AppRoute.ADMIN);
+  };
+
+  const handleLogout = async () => {
+    await authService.logout();
+    setIsAuthenticated(false);
+    setUserRole('user');
+    setActiveRoute(AppRoute.DASHBOARD);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -69,6 +152,20 @@ const App: React.FC = () => {
   const handleNewAppointment = (apt: Appointment) => {
     setAppointments(prev => [apt, ...prev]);
   };
+
+  // Se está verificando autenticação, mostrar loading
+  if (checkingAuth) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-brand-purple via-brand-dark to-brand-blue">
+        <Loader2 className="animate-spin text-white w-10 h-10" />
+      </div>
+    );
+  }
+
+  // Se não está autenticado e não tem tenant na URL, mostrar login
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
 
   const renderContent = () => {
     if (isLoading) return <div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-brand-purple w-10 h-10" /></div>;
@@ -101,13 +198,24 @@ const App: React.FC = () => {
           />
         );
       case AppRoute.PLAN_AND_CREDITS: return <PlanAndCredits credits={credits} setCredits={setCredits} onNavigate={setActiveRoute} />;
-      case AppRoute.ADMIN: return <AdminDashboard />;
+      case AppRoute.ADMIN: 
+        return userRole === 'admin' ? <TenantManagement /> : <AdminDashboard />;
       default: return <Dashboard credits={credits} />;
     }
   };
 
   return (
-    <Layout activeRoute={activeRoute} onNavigate={setActiveRoute} isWaConnected={isWaConnected} selectedAI={aiConfig.provider} credits={credits} businessName={config.name} userRole={userRole} onRoleSwitch={setUserRole}>
+    <Layout 
+      activeRoute={activeRoute} 
+      onNavigate={setActiveRoute} 
+      isWaConnected={isWaConnected} 
+      selectedAI={aiConfig.provider} 
+      credits={credits} 
+      businessName={config.name} 
+      userRole={userRole} 
+      onRoleSwitch={setUserRole}
+      onLogout={userRole === 'admin' ? handleLogout : undefined}
+    >
       {renderContent()}
     </Layout>
   );
