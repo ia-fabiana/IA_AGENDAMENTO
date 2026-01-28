@@ -134,7 +134,7 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
     setCalendarLoading(true);
     try {
       // Busca URL de autorização do backend
-      const response = await fetch('/api/google-calendar/auth-url');
+       const response = await fetch('https://ia-agendamentos-870139342019.us-central1.run.app/auth/google/calendar' );
       const data = await response.json();
       
       // Abre popup para autorização
