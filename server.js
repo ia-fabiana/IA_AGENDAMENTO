@@ -43,17 +43,72 @@ app.get('/auth/google/calendar', (req, res) => {
 
 app.get('/auth/google/callback', async (req, res) => {
   try {
-    const { code } = req.query;
+    const { code, error, state } = req.query;
+    
+    // Verificar se houve erro na autorização
+    if (error) {
+      console.error('❌ Erro na autorização OAuth:', error);
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Erro na Autorização</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 40px;
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 20px;
+              backdrop-filter: blur(10px);
+            }
+            .error-icon {
+              font-size: 64px;
+              margin-bottom: 20px;
+            }
+            h1 {
+              margin: 0 0 10px 0;
+              font-size: 32px;
+            }
+            p {
+              margin: 0;
+              opacity: 0.9;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="error-icon">❌</div>
+            <h1>Acesso Negado</h1>
+            <p>Você negou o acesso ao Google Calendar.</p>
+          </div>
+          <script>
+            setTimeout(() => window.close(), 3000);
+          </script>
+        </body>
+        </html>
+      `);
+    }
     
     if (!code) {
       return res.status(400).send('No authorization code received');
     }
 
-    // Troca o código por tokens
-    const tokens = await calendarService.getTokensFromCode(code);
-    
-    // Aqui você deve salvar os tokens no Supabase associados ao tenant
-    // Por enquanto, vamos apenas retornar sucesso e fechar a janela
+    // TODO: Obter tenantId do state ou da sessão do usuário
+    // Por enquanto, vamos usar um ID fixo para teste
+    const tenantId = state || 'test-tenant-id';
+
+    // Troca o código por tokens e salva no Supabase
+    const { tokens, googleEmail } = await calendarService.getTokensFromCode(code, tenantId);
     
     res.send(`
       <!DOCTYPE html>
@@ -101,7 +156,11 @@ app.get('/auth/google/callback', async (req, res) => {
         <script>
           // Envia mensagem para a janela pai e fecha
           if (window.opener) {
-            window.opener.postMessage({ type: 'GOOGLE_CALENDAR_CONNECTED', tokens: ${JSON.stringify(tokens)} }, '*');
+            window.opener.postMessage({ 
+              type: 'GOOGLE_CALENDAR_CONNECTED', 
+              tenantId: '${tenantId}',
+              googleEmail: '${googleEmail}'
+            }, '*');
             setTimeout(() => window.close(), 2000);
           }
         </script>
@@ -165,28 +224,34 @@ app.get('/auth/google/callback', async (req, res) => {
 // API para listar eventos do calendário
 app.post('/api/calendar/events', async (req, res) => {
   try {
-    const { tokens } = req.body;
+    const { tenantId } = req.body;
     
-    if (!tokens) {
-      return res.status(400).json({ error: 'Tokens required' });
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId required' });
     }
 
-    const events = await calendarService.listEvents(tokens);
+    const events = await calendarService.listEvents(tenantId);
     res.json({ events });
   } catch (error) {
     console.error('Error listing events:', error);
-    res.status(500).json({ error: 'Failed to list events' });
+    res.status(500).json({ error: 'Failed to list events', details: error.message });
   }
 });
 
-// API de teste para criar evento usando tokens salvos em memória
+// API de teste para criar evento usando tenantId
 app.post('/api/calendar/test/create-event', async (req, res) => {
   try {
-    const tokens = calendarService.getLastTokens();
+    const { tenantId } = req.body;
     
-    if (!tokens) {
+    // Usar tenantId do body ou padrão para testes
+    const targetTenantId = tenantId || 'test-tenant-id';
+    
+    // Verificar se o tenant tem tokens salvos
+    const isConnected = await calendarService.isConnected(targetTenantId);
+    if (!isConnected) {
       return res.status(400).json({ 
-        error: 'No tokens found. Please authorize first at /auth/google/calendar' 
+        error: 'Google Calendar not connected. Please authorize first at /auth/google/calendar',
+        tenantId: targetTenantId
       });
     }
 
@@ -204,13 +269,14 @@ app.post('/api/calendar/test/create-event', async (req, res) => {
       },
     };
 
-    const createdEvent = await calendarService.createEvent(tokens, event);
+    const createdEvent = await calendarService.createEvent(targetTenantId, event);
     
     res.json({ 
       success: true,
       message: 'Evento criado com sucesso!',
       event: createdEvent,
-      eventLink: createdEvent.htmlLink
+      eventLink: createdEvent.htmlLink,
+      tenantId: targetTenantId
     });
   } catch (error) {
     console.error('Error creating test event:', error);
@@ -224,17 +290,53 @@ app.post('/api/calendar/test/create-event', async (req, res) => {
 // API para criar evento
 app.post('/api/calendar/events/create', async (req, res) => {
   try {
-    const { tokens, event } = req.body;
+    const { tenantId, event } = req.body;
     
-    if (!tokens || !event) {
-      return res.status(400).json({ error: 'Tokens and event required' });
+    if (!tenantId || !event) {
+      return res.status(400).json({ error: 'tenantId and event required' });
     }
 
-    const createdEvent = await calendarService.createEvent(tokens, event);
+    const createdEvent = await calendarService.createEvent(tenantId, event);
     res.json({ event: createdEvent });
   } catch (error) {
     console.error('Error creating event:', error);
-    res.status(500).json({ error: 'Failed to create event' });
+    res.status(500).json({ error: 'Failed to create event', details: error.message });
+  }
+});
+
+// API para verificar status da conexão do Google Calendar
+app.get('/api/calendar/status/:tenantId', async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+    
+    const isConnected = await calendarService.isConnected(tenantId);
+    const isValid = isConnected ? await calendarService.verifyTokens(tenantId) : false;
+    
+    res.json({ 
+      connected: isConnected,
+      valid: isValid,
+      tenantId 
+    });
+  } catch (error) {
+    console.error('Error checking calendar status:', error);
+    res.status(500).json({ error: 'Failed to check status', details: error.message });
+  }
+});
+
+// API para desconectar Google Calendar
+app.post('/api/calendar/disconnect', async (req, res) => {
+  try {
+    const { tenantId } = req.body;
+    
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId required' });
+    }
+
+    await calendarService.disconnect(tenantId);
+    res.json({ success: true, message: 'Google Calendar disconnected' });
+  } catch (error) {
+    console.error('Error disconnecting calendar:', error);
+    res.status(500).json({ error: 'Failed to disconnect', details: error.message });
   }
 });
 

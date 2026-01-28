@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { supabase } from './supabaseClient.js';
 
 // Configuração OAuth2
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
@@ -12,8 +13,6 @@ class CalendarService {
       GOOGLE_CLIENT_SECRET,
       REDIRECT_URI
     );
-    // Armazenamento temporário de tokens em memória (para testes)
-    this.lastTokens = null;
   }
 
   /**
@@ -22,7 +21,8 @@ class CalendarService {
   getAuthUrl() {
     const scopes = [
       'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events'
+      'https://www.googleapis.com/auth/calendar.events',
+      'https://www.googleapis.com/auth/userinfo.email'
     ];
 
     return this.oauth2Client.generateAuthUrl({
@@ -34,14 +34,132 @@ class CalendarService {
   }
 
   /**
-   * Troca o código de autorização por tokens de acesso
+   * Troca o código de autorização por tokens de acesso e salva no Supabase
    */
-  async getTokensFromCode(code) {
-    const { tokens } = await this.oauth2Client.getToken(code);
-    // Salva tokens temporariamente em memória
-    this.lastTokens = tokens;
-    console.log('✅ Tokens salvos em memória:', { hasAccessToken: !!tokens.access_token, hasRefreshToken: !!tokens.refresh_token });
-    return tokens;
+  async getTokensFromCode(code, tenantId) {
+    try {
+      const { tokens } = await this.oauth2Client.getToken(code);
+      
+      // Obter email do usuário Google
+      this.setCredentials(tokens);
+      const oauth2 = google.oauth2({ version: 'v2', auth: this.oauth2Client });
+      const { data } = await oauth2.userinfo.get();
+      const googleEmail = data.email;
+
+      // Salvar tokens no Supabase
+      await this.saveTokens(tenantId, tokens, googleEmail);
+      
+      console.log('✅ Tokens salvos no Supabase:', { 
+        tenantId, 
+        googleEmail,
+        hasAccessToken: !!tokens.access_token, 
+        hasRefreshToken: !!tokens.refresh_token 
+      });
+      
+      return { tokens, googleEmail };
+    } catch (error) {
+      console.error('❌ Erro ao obter tokens do código:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Salva ou atualiza tokens no Supabase
+   */
+  async saveTokens(tenantId, tokens, googleEmail = null) {
+    try {
+      const { data, error } = await supabase
+        .from('google_calendar_tokens')
+        .upsert({
+          tenant_id: tenantId,
+          google_email: googleEmail,
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          token_type: tokens.token_type || 'Bearer',
+          expiry_date: tokens.expiry_date,
+          scopes: tokens.scope ? tokens.scope.split(' ') : null,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'tenant_id'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Erro ao salvar tokens no Supabase:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ Erro ao salvar tokens:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Busca tokens do Supabase por tenant_id
+   */
+  async getTokensByTenantId(tenantId) {
+    try {
+      const { data, error } = await supabase
+        .from('google_calendar_tokens')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Nenhum registro encontrado
+          return null;
+        }
+        console.error('❌ Erro ao buscar tokens no Supabase:', error);
+        throw error;
+      }
+
+      // Converter para formato esperado pelo Google OAuth
+      return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        token_type: data.token_type,
+        expiry_date: data.expiry_date,
+        scope: data.scopes ? data.scopes.join(' ') : null
+      };
+    } catch (error) {
+      console.error('❌ Erro ao buscar tokens:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica se o token está expirado e renova se necessário
+   */
+  async ensureValidTokens(tenantId) {
+    try {
+      const tokens = await this.getTokensByTenantId(tenantId);
+      
+      if (!tokens) {
+        throw new Error('No tokens found for tenant');
+      }
+
+      // Verificar se o token está expirado (com margem de 5 minutos)
+      const now = Date.now();
+      const expiryWithMargin = tokens.expiry_date - (5 * 60 * 1000);
+
+      if (now >= expiryWithMargin) {
+        console.log('🔄 Token expirado, renovando...');
+        const newTokens = await this.refreshAccessToken(tokens.refresh_token);
+        await this.saveTokens(tenantId, newTokens);
+        return newTokens;
+      }
+
+      return tokens;
+    } catch (error) {
+      console.error('❌ Erro ao garantir tokens válidos:', error);
+      throw error;
+    }
   }
 
   /**
@@ -66,7 +184,8 @@ class CalendarService {
   /**
    * Lista eventos do calendário
    */
-  async listEvents(tokens, maxResults = 50) {
+  async listEvents(tenantId, maxResults = 50) {
+    const tokens = await this.ensureValidTokens(tenantId);
     this.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
@@ -85,7 +204,8 @@ class CalendarService {
   /**
    * Cria um novo evento no calendário
    */
-  async createEvent(tokens, event) {
+  async createEvent(tenantId, event) {
+    const tokens = await this.ensureValidTokens(tenantId);
     this.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
@@ -101,7 +221,8 @@ class CalendarService {
   /**
    * Atualiza um evento existente
    */
-  async updateEvent(tokens, eventId, event) {
+  async updateEvent(tenantId, eventId, event) {
+    const tokens = await this.ensureValidTokens(tenantId);
     this.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
@@ -118,7 +239,8 @@ class CalendarService {
   /**
    * Deleta um evento
    */
-  async deleteEvent(tokens, eventId) {
+  async deleteEvent(tenantId, eventId) {
+    const tokens = await this.ensureValidTokens(tenantId);
     this.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
@@ -132,7 +254,8 @@ class CalendarService {
   /**
    * Busca eventos em um intervalo de datas
    */
-  async getEventsByDateRange(tokens, startDate, endDate) {
+  async getEventsByDateRange(tenantId, startDate, endDate) {
+    const tokens = await this.ensureValidTokens(tenantId);
     this.setCredentials(tokens);
 
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
@@ -151,8 +274,9 @@ class CalendarService {
   /**
    * Verifica se os tokens ainda são válidos
    */
-  async verifyTokens(tokens) {
+  async verifyTokens(tenantId) {
     try {
+      const tokens = await this.ensureValidTokens(tenantId);
       this.setCredentials(tokens);
       const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
       await calendar.calendarList.list({ maxResults: 1 });
@@ -163,10 +287,38 @@ class CalendarService {
   }
 
   /**
-   * Obtém os últimos tokens salvos (para testes)
+   * Desconecta o Google Calendar (marca como inativo)
    */
-  getLastTokens() {
-    return this.lastTokens;
+  async disconnect(tenantId) {
+    try {
+      const { error } = await supabase
+        .from('google_calendar_tokens')
+        .update({ is_active: false })
+        .eq('tenant_id', tenantId);
+
+      if (error) {
+        console.error('❌ Erro ao desconectar Google Calendar:', error);
+        throw error;
+      }
+
+      console.log('✅ Google Calendar desconectado:', { tenantId });
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao desconectar:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica se o tenant tem Google Calendar conectado
+   */
+  async isConnected(tenantId) {
+    try {
+      const tokens = await this.getTokensByTenantId(tenantId);
+      return !!tokens;
+    } catch (error) {
+      return false;
+    }
   }
 }
 
