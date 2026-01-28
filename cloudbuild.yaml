@@ -44,7 +44,7 @@ steps:
       - 'us-central1'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'EVOLUTION_URL=${_EVOLUTION_URL},EVOLUTION_KEY=${_EVOLUTION_KEY}'
+      - 'EVOLUTION_URL=${_EVOLUTION_URL},EVOLUTION_KEY=${_EVOLUTION_KEY},SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},SUPABASE_SERVICE_KEY=${_SUPABASE_SERVICE_KEY},GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},GOOGLE_REDIRECT_URI=${_GOOGLE_REDIRECT_URI}'
 
 # Images to be pushed to Container Registry
 images:
@@ -55,8 +55,14 @@ images:
 substitutions:
   _SUPABASE_URL: 'https://ztfnnzclwvycpbapbbhb.supabase.co'
   _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0Zm5uemNsd3Z5Y3BiYXBiYmhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyNjM5NjIsImV4cCI6MjA4NDgzOTk2Mn0.j2J1E6xOQw_qKV4vY-FP0U_-ImmBqAWbzWGZ5hhcR1g'
-  _EVOLUTION_URL: 'https://api.iafabiana.com.br'
-  _EVOLUTION_KEY: 'minha_chave_secreta_123'
+  _EVOLUTION_URL: 'http://95.217.232.92:8080'
+  _EVOLUTION_KEY: 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'
+  # Secrets devem ser configurados no Cloud Build Trigger como variáveis de substituição
+  # Não coloque credenciais sensíveis diretamente neste arquivo!
+  _SUPABASE_SERVICE_KEY: ''
+  _GOOGLE_CLIENT_ID: ''
+  _GOOGLE_CLIENT_SECRET: ''
+  _GOOGLE_REDIRECT_URI: 'https://ia-agendamentos-870139342019.us-central1.run.app/api/calendar/callback'
 
 timeout: 1200s
 
