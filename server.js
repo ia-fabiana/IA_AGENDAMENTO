@@ -41,7 +41,7 @@ app.get('/auth/google/calendar', (req, res) => {
   }
 });
 
-app.get('/auth/google/callback', async (req, res) => {
+app.get('/api/calendar/callback', async (req, res) => {
   try {
     const { code, error, state } = req.query;
     
