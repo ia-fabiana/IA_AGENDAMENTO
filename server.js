@@ -31,13 +31,15 @@ app.get('/health', (req, res) => {
 });
 
 // Google Calendar OAuth2 Routes
+// Rota para iniciar OAuth - redireciona direto para o Google
 app.get('/auth/google/calendar', (req, res) => {
   try {
     const authUrl = calendarService.getAuthUrl();
-    res.json({ authUrl });
+    // Redireciona direto para a página de autorização do Google
+    res.redirect(authUrl);
   } catch (error) {
     console.error('Error generating auth URL:', error);
-    res.status(500).json({ error: 'Failed to generate auth URL' });
+    res.status(500).send('Failed to generate auth URL');
   }
 });
 
