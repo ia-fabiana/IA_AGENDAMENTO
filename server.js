@@ -179,6 +179,48 @@ app.post('/api/calendar/events', async (req, res) => {
   }
 });
 
+// API de teste para criar evento usando tokens salvos em memória
+app.post('/api/calendar/test/create-event', async (req, res) => {
+  try {
+    const tokens = calendarService.getLastTokens();
+    
+    if (!tokens) {
+      return res.status(400).json({ 
+        error: 'No tokens found. Please authorize first at /auth/google/calendar' 
+      });
+    }
+
+    // Evento de teste
+    const event = {
+      summary: '🎉 Teste de Integração Google Calendar',
+      description: 'Este é um evento de teste criado pela IA.AGENDAMENTOS para validar a integração com o Google Calendar.',
+      start: {
+        dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Amanhã
+        timeZone: 'America/Sao_Paulo',
+      },
+      end: {
+        dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(), // Amanhã + 1h
+        timeZone: 'America/Sao_Paulo',
+      },
+    };
+
+    const createdEvent = await calendarService.createEvent(tokens, event);
+    
+    res.json({ 
+      success: true,
+      message: 'Evento criado com sucesso!',
+      event: createdEvent,
+      eventLink: createdEvent.htmlLink
+    });
+  } catch (error) {
+    console.error('Error creating test event:', error);
+    res.status(500).json({ 
+      error: 'Failed to create test event',
+      details: error.message 
+    });
+  }
+});
+
 // API para criar evento
 app.post('/api/calendar/events/create', async (req, res) => {
   try {

@@ -12,6 +12,8 @@ class CalendarService {
       GOOGLE_CLIENT_SECRET,
       REDIRECT_URI
     );
+    // Armazenamento temporário de tokens em memória (para testes)
+    this.lastTokens = null;
   }
 
   /**
@@ -36,6 +38,9 @@ class CalendarService {
    */
   async getTokensFromCode(code) {
     const { tokens } = await this.oauth2Client.getToken(code);
+    // Salva tokens temporariamente em memória
+    this.lastTokens = tokens;
+    console.log('✅ Tokens salvos em memória:', { hasAccessToken: !!tokens.access_token, hasRefreshToken: !!tokens.refresh_token });
     return tokens;
   }
 
@@ -155,6 +160,13 @@ class CalendarService {
     } catch (error) {
       return false;
     }
+  }
+
+  /**
+   * Obtém os últimos tokens salvos (para testes)
+   */
+  getLastTokens() {
+    return this.lastTokens;
   }
 }
 
