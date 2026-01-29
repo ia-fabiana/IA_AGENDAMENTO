@@ -34,7 +34,8 @@ app.get('/health', (req, res) => {
 // Rota para iniciar OAuth - redireciona direto para o Google
 app.get('/auth/google/calendar', (req, res) => {
   try {
-    const authUrl = calendarService.getAuthUrl();
+    const tenantId = req.query.tenant; // Pega o tenantId do query parameter
+    const authUrl = calendarService.getAuthUrl(tenantId);
     // Redireciona direto para a página de autorização do Google
     res.redirect(authUrl);
   } catch (error) {
@@ -105,9 +106,47 @@ app.get('/api/calendar/callback', async (req, res) => {
       return res.status(400).send('No authorization code received');
     }
 
-    // TODO: Obter tenantId do state ou da sessão do usuário
-    // Por enquanto, vamos usar um ID fixo para teste
-    const tenantId = state || 'test-tenant-id';
+    // Obter tenantId do state parameter (passado no fluxo OAuth)
+    const tenantId = state;
+    
+    if (!tenantId) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Erro - Tenant Não Informado</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 40px;
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 20px;
+              backdrop-filter: blur(10px);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>⚠️ Erro</h1>
+            <p>Tenant ID não foi informado. Por favor, inicie o processo de autorização novamente.</p>
+          </div>
+          <script>
+            setTimeout(() => window.close(), 5000);
+          </script>
+        </body>
+        </html>
+      `);
+    }
 
     // Troca o código por tokens e salva no Supabase
     const { tokens, googleEmail } = await calendarService.getTokensFromCode(code, tenantId);
