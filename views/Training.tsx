@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, MapPin, Clock, Info, ShieldAlert, Navigation, Save, RotateCcw, CheckCircle2, Tag, Image as ImageIcon, Sparkles, AlertCircle } from 'lucide-react';
 import { Service, BusinessConfig } from '../types';
-import { supabase } from '../services/supabase';
+import { trainingService } from '../services/trainingService';
 
 interface TrainingProps {
   config: BusinessConfig;
@@ -42,15 +42,8 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
     setShowError(false);
     
     try {
-      // Salvar tudo em localStorage por enquanto (solução temporária)
-      // TODO: Adicionar colunas no banco depois
-      const trainingData = {
-        config: config,
-        services: services,
-        lastSaved: new Date().toISOString()
-      };
-      
-      localStorage.setItem(`training_data_${config.id}`, JSON.stringify(trainingData));
+      // Salvar no banco de dados usando o trainingService
+      await trainingService.saveTrainingData(config.id, config, services);
       
       // Sucesso!
       setIsSaving(false);

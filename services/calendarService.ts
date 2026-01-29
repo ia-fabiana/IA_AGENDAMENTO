@@ -41,18 +41,26 @@ class CalendarService {
 
   /**
    * Gera URL de autorização para o usuário conectar sua conta Google
+   * @param tenantId - ID do tenant para incluir no state parameter
    */
-  getAuthUrl(): string {
+  getAuthUrl(tenantId?: string): string {
     const scopes = [
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/calendar.events'
     ];
 
-    return this.oauth2Client.generateAuthUrl({
+    const authOptions: any = {
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent' // Força mostrar tela de consentimento para obter refresh_token
-    });
+    };
+
+    // Adiciona state apenas se tenantId for fornecido
+    if (tenantId) {
+      authOptions.state = tenantId;
+    }
+
+    return this.oauth2Client.generateAuthUrl(authOptions);
   }
 
   /**
