@@ -133,28 +133,15 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
   const handleConnectCalendar = async () => {
     setCalendarLoading(true);
     try {
-      // Busca URL de autorização do backend incluindo tenantId
-      const response = await fetch(`/auth/google/calendar?tenantId=${tenantId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Erro ao iniciar autorização Google Calendar');
-      }
-      
-      // O backend redireciona diretamente para o Google, então não há JSON response
-      // Vamos abrir a URL em uma popup
-      const authUrl = response.url;
-      
-      // Abre popup para autorização
+      // Abre diretamente a rota de OAuth que redireciona para o Google
+      // O backend irá redirecionar para a página de autorização do Google
       const width = 600;
       const height = 700;
       const left = (window.screen.width - width) / 2;
       const top = (window.screen.height - height) / 2;
+      
+      // Abre popup para autorização (o backend faz redirect para Google)
+      const authUrl = `/auth/google/calendar?tenantId=${encodeURIComponent(tenantId)}`;
       
       const popup = window.open(
         authUrl,

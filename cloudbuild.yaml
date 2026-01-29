@@ -56,6 +56,8 @@ substitutions:
   _SUPABASE_URL: 'https://ztfnnzclwvycpbapbbhb.supabase.co'
   _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0Zm5uemNsd3Z5Y3BiYXBiYmhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyNjM5NjIsImV4cCI6MjA4NDgzOTk2Mn0.j2J1E6xOQw_qKV4vY-FP0U_-ImmBqAWbzWGZ5hhcR1g'
   _EVOLUTION_URL: 'https://api.iafabiana.com.br'
+  # SECURITY: Configure this in Google Cloud Build Trigger as a secure substitution variable
+  # Do NOT commit real API keys to the repository!
   _EVOLUTION_KEY: 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'
   # Secrets devem ser configurados no Cloud Build Trigger como variáveis de substituição
   # Não coloque credenciais sensíveis diretamente neste arquivo!

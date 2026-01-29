@@ -41,9 +41,13 @@ class CalendarService {
 
   /**
    * Gera URL de autorização para o usuário conectar sua conta Google
-   * @param tenantId - ID do tenant para incluir no state
+   * @param tenantId - ID do tenant para incluir no state (obrigatório)
    */
-  getAuthUrl(tenantId?: string): string {
+  getAuthUrl(tenantId: string): string {
+    if (!tenantId) {
+      throw new Error('tenantId is required for OAuth flow');
+    }
+    
     const scopes = [
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/calendar.events'

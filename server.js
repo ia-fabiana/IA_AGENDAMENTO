@@ -12,6 +12,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Configurações da Evolution API
+// SECURITY NOTE: These default values are for development only
+// In production, always use environment variables configured in Cloud Run
 const EVOLUTION_URL = process.env.EVOLUTION_URL || 'https://api.iafabiana.com.br';
 const EVOLUTION_KEY = process.env.EVOLUTION_KEY || 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J';
 
@@ -34,8 +36,15 @@ app.get('/health', (req, res) => {
 // Rota para iniciar OAuth - redireciona direto para o Google
 app.get('/auth/google/calendar', (req, res) => {
   try {
-    // Obter tenantId da query string ou do header
-    const tenantId = req.query.tenantId || req.headers['x-tenant-id'] || 'default-tenant';
+    // Obter tenantId da query string ou do header (obrigatório)
+    const tenantId = req.query.tenantId || req.headers['x-tenant-id'];
+    
+    if (!tenantId) {
+      return res.status(400).json({ 
+        error: 'tenantId is required',
+        message: 'Please provide tenantId as query parameter or x-tenant-id header'
+      });
+    }
     
     // Passar o tenantId como state para recuperar no callback
     const authUrl = calendarService.getAuthUrl(tenantId);
@@ -113,12 +122,42 @@ app.get('/api/calendar/callback', async (req, res) => {
     }
 
     // Obter tenantId do state (passado na URL de autenticação)
-    const tenantId = state || 'default-tenant';
-    
     if (!state) {
-      console.warn('⚠️ TenantId não recebido no callback. Usando valor padrão.');
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Erro - TenantId Ausente</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 40px;
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>⚠️ Erro de Autenticação</h1>
+            <p>TenantId não foi fornecido. Por favor, inicie o processo novamente.</p>
+          </div>
+        </body>
+        </html>
+      `);
     }
     
+    const tenantId = state;
     console.log(`Processando callback OAuth para tenant: ${tenantId}`);
 
     // Troca o código por tokens e salva no Supabase
