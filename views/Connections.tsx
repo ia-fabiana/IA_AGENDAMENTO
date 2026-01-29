@@ -133,22 +133,22 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
   const handleConnectCalendar = async () => {
     setCalendarLoading(true);
     try {
-      // Busca URL de autorização do backend
-      const response = await fetch('/auth/google/calendar', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache'
-  }
-});
-const response = await fetch('/auth/google/calendar', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache'
-  }
-});
-      const data = await response.json();
+      // Busca URL de autorização do backend incluindo tenantId
+      const response = await fetch(`/auth/google/calendar?tenantId=${tenantId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erro ao iniciar autorização Google Calendar');
+      }
+      
+      // O backend redireciona diretamente para o Google, então não há JSON response
+      // Vamos abrir a URL em uma popup
+      const authUrl = response.url;
       
       // Abre popup para autorização
       const width = 600;
@@ -157,7 +157,7 @@ const response = await fetch('/auth/google/calendar', {
       const top = (window.screen.height - height) / 2;
       
       const popup = window.open(
-        data.authUrl,
+        authUrl,
         'Google Calendar Authorization',
         `width=${width},height=${height},left=${left},top=${top}`
       );

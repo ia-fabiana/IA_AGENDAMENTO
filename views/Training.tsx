@@ -43,7 +43,10 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
     
     try {
       // Salvar tudo em localStorage por enquanto (solução temporária)
-      // TODO: Adicionar colunas no banco depois
+      // NOTA: As migrations SQL já foram criadas (migration_add_training_fields.sql)
+      // Para persistência no banco, é necessário:
+      // 1. Aplicar a migration no Supabase
+      // 2. Substituir localStorage por chamadas ao backend/Supabase
       const trainingData = {
         config: config,
         services: services,

@@ -12,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Configurações da Evolution API
-const EVOLUTION_URL = process.env.EVOLUTION_URL || 'http://95.217.232.92:8080';
+const EVOLUTION_URL = process.env.EVOLUTION_URL || 'https://api.iafabiana.com.br';
 const EVOLUTION_KEY = process.env.EVOLUTION_KEY || 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J';
 
 // Middlewares
@@ -34,7 +34,14 @@ app.get('/health', (req, res) => {
 // Rota para iniciar OAuth - redireciona direto para o Google
 app.get('/auth/google/calendar', (req, res) => {
   try {
-    const authUrl = calendarService.getAuthUrl();
+    // Obter tenantId da query string ou do header
+    const tenantId = req.query.tenantId || req.headers['x-tenant-id'] || 'default-tenant';
+    
+    // Passar o tenantId como state para recuperar no callback
+    const authUrl = calendarService.getAuthUrl(tenantId);
+    
+    console.log(`Iniciando OAuth para tenant: ${tenantId}`);
+    
     // Redireciona direto para a página de autorização do Google
     res.redirect(authUrl);
   } catch (error) {
@@ -105,9 +112,14 @@ app.get('/api/calendar/callback', async (req, res) => {
       return res.status(400).send('No authorization code received');
     }
 
-    // TODO: Obter tenantId do state ou da sessão do usuário
-    // Por enquanto, vamos usar um ID fixo para teste
-    const tenantId = state || 'test-tenant-id';
+    // Obter tenantId do state (passado na URL de autenticação)
+    const tenantId = state || 'default-tenant';
+    
+    if (!state) {
+      console.warn('⚠️ TenantId não recebido no callback. Usando valor padrão.');
+    }
+    
+    console.log(`Processando callback OAuth para tenant: ${tenantId}`);
 
     // Troca o código por tokens e salva no Supabase
     const { tokens, googleEmail } = await calendarService.getTokensFromCode(code, tenantId);
