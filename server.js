@@ -148,6 +148,47 @@ app.get('/api/calendar/callback', async (req, res) => {
       `);
     }
 
+    // Validar formato UUID do tenantId
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(tenantId)) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Erro - Tenant ID Inválido</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+              color: white;
+            }
+            .container {
+              text-align: center;
+              padding: 40px;
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 20px;
+              backdrop-filter: blur(10px);
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>⚠️ Erro</h1>
+            <p>Tenant ID inválido. Por favor, verifique o ID e tente novamente.</p>
+          </div>
+          <script>
+            setTimeout(() => window.close(), 5000);
+          </script>
+        </body>
+        </html>
+      `);
+    }
+
     // Troca o código por tokens e salva no Supabase
     const { tokens, googleEmail } = await calendarService.getTokensFromCode(code, tenantId);
     

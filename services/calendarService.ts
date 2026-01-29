@@ -49,12 +49,18 @@ class CalendarService {
       'https://www.googleapis.com/auth/calendar.events'
     ];
 
-    return this.oauth2Client.generateAuthUrl({
+    const authOptions: any = {
       access_type: 'offline',
       scope: scopes,
-      prompt: 'consent', // Força mostrar tela de consentimento para obter refresh_token
-      state: tenantId || undefined // Passa o tenantId via state parameter
-    });
+      prompt: 'consent' // Força mostrar tela de consentimento para obter refresh_token
+    };
+
+    // Adiciona state apenas se tenantId for fornecido
+    if (tenantId) {
+      authOptions.state = tenantId;
+    }
+
+    return this.oauth2Client.generateAuthUrl(authOptions);
   }
 
   /**

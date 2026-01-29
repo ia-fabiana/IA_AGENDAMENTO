@@ -24,11 +24,17 @@ export const trainingService = {
         .eq('id', tenantId);
 
       if (error) {
-        console.error('Error saving business config:', error);
+        console.error('[trainingService] Error saving business config:', {
+          tenantId,
+          error: error.message
+        });
         throw new Error(`Falha ao salvar configuração: ${error.message}`);
       }
     } catch (error: any) {
-      console.error('Error in saveBusinessConfig:', error);
+      console.error('[trainingService] Error in saveBusinessConfig:', {
+        tenantId,
+        error: error.message
+      });
       throw error;
     }
   },
@@ -45,7 +51,10 @@ export const trainingService = {
         .single();
 
       if (error) {
-        console.error('Error loading business config:', error);
+        console.error('[trainingService] Error loading business config:', {
+          tenantId,
+          error: error.message
+        });
         throw new Error(`Falha ao carregar configuração: ${error.message}`);
       }
 
@@ -69,13 +78,20 @@ export const trainingService = {
         }
       };
     } catch (error: any) {
-      console.error('Error in loadBusinessConfig:', error);
+      console.error('[trainingService] Error in loadBusinessConfig:', {
+        tenantId,
+        error: error.message
+      });
       throw error;
     }
   },
 
   /**
    * Salva ou atualiza serviços de um tenant
+   * 
+   * NOTA: Esta implementação usa delete-then-insert pattern.
+   * Para produção, considere usar PostgreSQL transactions ou upsert pattern
+   * para garantir atomicidade e evitar perda de dados.
    */
   async saveServices(tenantId: string, services: Service[]): Promise<void> {
     try {
@@ -110,7 +126,11 @@ export const trainingService = {
         }
       }
     } catch (error: any) {
-      console.error('Error in saveServices:', error);
+      console.error('[trainingService] Error in saveServices:', {
+        tenantId,
+        error: error.message,
+        servicesCount: services.length
+      });
       throw error;
     }
   },
@@ -126,7 +146,10 @@ export const trainingService = {
         .eq('tenant_id', tenantId);
 
       if (error) {
-        console.error('Error loading services:', error);
+        console.error('[trainingService] Error loading services:', {
+          tenantId,
+          error: error.message
+        });
         throw new Error(`Falha ao carregar serviços: ${error.message}`);
       }
 
@@ -142,7 +165,10 @@ export const trainingService = {
         duration: item.duracao_minutos || 30
       }));
     } catch (error: any) {
-      console.error('Error in loadServices:', error);
+      console.error('[trainingService] Error in loadServices:', {
+        tenantId,
+        error: error.message
+      });
       throw error;
     }
   },
@@ -158,7 +184,10 @@ export const trainingService = {
       // Salvar serviços
       await this.saveServices(tenantId, services);
     } catch (error: any) {
-      console.error('Error in saveTrainingData:', error);
+      console.error('[trainingService] Error in saveTrainingData:', {
+        tenantId,
+        error: error.message
+      });
       throw error;
     }
   }

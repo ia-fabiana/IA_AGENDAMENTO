@@ -2,8 +2,14 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://ztfnnzclwvycpbapbbhb.supabase.co';
+const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl) {
+  console.error('❌ Erro: SUPABASE_URL não configurada');
+  console.error('Por favor, configure a variável de ambiente SUPABASE_URL antes de executar este script.');
+  process.exit(1);
+}
 
 if (!supabaseServiceKey) {
   console.error('❌ Erro: SUPABASE_SERVICE_KEY não configurada');
