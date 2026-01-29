@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos temporários e backups
+*.patch
+*.zip
+*.tar.gz
+*_corrigido*
+*_SIMPLIFICADO*
+*backup*
