@@ -135,19 +135,12 @@ const Connections: React.FC<ConnectionsProps> = ({ tenantId, businessName, isCon
     try {
       // Busca URL de autorização do backend
       const response = await fetch('/auth/google/calendar', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache'
-  }
-});
-const response = await fetch('/auth/google/calendar', {
-  method: 'GET',
-  headers: {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'no-cache'
-  }
-});
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
       const data = await response.json();
       
       // Abre popup para autorização
