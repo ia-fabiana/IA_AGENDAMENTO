@@ -2,8 +2,14 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 
-const supabaseUrl = 'https://ztfnnzclwvycpbapbbhb.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0Zm5uemNsd3Z5Y3BiYXBiYmhiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTI2Mzk2MiwiZXhwIjoyMDg0ODM5OTYyfQ.aqjGNKB5vVOBnWcJqYvHqYQEUxDxMjGvQqOjqBYKx-A'; // Service role key
+const supabaseUrl = process.env.SUPABASE_URL || 'https://ztfnnzclwvycpbapbbhb.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseServiceKey) {
+  console.error('❌ Erro: SUPABASE_SERVICE_KEY não configurada');
+  console.error('Por favor, configure a variável de ambiente SUPABASE_SERVICE_KEY antes de executar este script.');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
