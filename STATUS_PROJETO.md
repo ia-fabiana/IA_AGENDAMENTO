@@ -141,7 +141,7 @@ interface Appointment {
 **Configuração atual:**
 ```javascript
 EVOLUTION_URL: 'https://api.iafabiana.com.br'
-EVOLUTION_KEY: 'minha_chave_secreta_123'
+EVOLUTION_KEY: '[REDACTED - Ver variáveis de ambiente]'
 ```
 
 ---
@@ -227,8 +227,8 @@ interface UserCredits {
 ```bash
 # 1. Atualizar Evolution API
 # Arquivos: cloudbuild.yaml, .env.example, server.js
-EVOLUTION_URL='https://api.iafabiana.com.br'
-EVOLUTION_KEY='minha_chave_secreta_123'
+EVOLUTION_URL='https://sua-evolution-api.com.br'
+EVOLUTION_KEY='SUA_CHAVE_SECRETA_AQUI'
 
 # 2. Remover arquivos desnecessários
 rm "server_corrigido (1).js"
@@ -253,7 +253,7 @@ echo "*_corrigido*" >> .gitignore
 | 1 | **Google Calendar frontend incompleto** | Interface existe mas falta validação de token salvo | Adicionar `checkCalendarConnection()` em `Connections.tsx` |
 | 2 | **Migration não aplicada** | `create_google_calendar_tokens.sql` criada mas não executada | Executar via `run_migration.js` ou Supabase Dashboard |
 | 3 | **Variáveis de ambiente vazias** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Seguir `GOOGLE_CALENDAR_SETUP.md` e configurar no Cloud Run |
-| 4 | **Service Key vazia** | `_SUPABASE_SERVICE_KEY: ''` no cloudbuild.yaml | Obter do Supabase Dashboard → Settings → API |
+| 4 | **Service Key vazia** | `_SUPABASE_SERVICE_KEY: ''` no cloudbuild.yaml | Obter na seção Settings → API do Supabase Dashboard |
 | 5 | **Dois arquivos evolutionService.ts** | `/evolutionService.ts` e `/services/evolutionService.ts` | Consolidar em `/services/` e remover da raiz |
 
 ---
@@ -281,16 +281,16 @@ echo "*_corrigido*" >> .gitignore
 # Tempo estimado: 15 minutos
 
 # Editar cloudbuild.yaml (linhas 58-59)
-_EVOLUTION_URL: 'https://api.iafabiana.com.br'
-_EVOLUTION_KEY: 'minha_chave_secreta_123'
+_EVOLUTION_URL: 'https://sua-evolution-api.com.br'
+_EVOLUTION_KEY: 'SUA_CHAVE_SECRETA_AQUI'
 
 # Editar .env.example (linhas 2-3)
-EVOLUTION_URL=https://api.iafabiana.com.br
-EVOLUTION_KEY=minha_chave_secreta_123
+EVOLUTION_URL=https://sua-evolution-api.com.br
+EVOLUTION_KEY=SUA_CHAVE_SECRETA_AQUI
 
 # Editar server.js (linhas 15-16)
-const EVOLUTION_URL = process.env.EVOLUTION_URL || 'https://api.iafabiana.com.br';
-const EVOLUTION_KEY = process.env.EVOLUTION_KEY || 'minha_chave_secreta_123';
+const EVOLUTION_URL = process.env.EVOLUTION_URL || 'https://sua-evolution-api.com.br';
+const EVOLUTION_KEY = process.env.EVOLUTION_KEY || 'SUA_CHAVE_SECRETA_AQUI';
 ```
 
 ```bash
