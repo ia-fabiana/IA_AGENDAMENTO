@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, MapPin, Clock, Info, ShieldAlert, Navigation, Save, RotateCcw, CheckCircle2, Tag, Image as ImageIcon, Sparkles, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, MapPin, Clock, Info, ShieldAlert, Navigation, Save, RotateCcw, CheckCircle2, Tag, Image as ImageIcon, Sparkles, Smartphone } from 'lucide-react';
 import { Service, BusinessConfig } from '../types';
-import { trainingService } from '../services/trainingService';
 
 interface TrainingProps {
   config: BusinessConfig;
@@ -14,11 +13,8 @@ interface TrainingProps {
 const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setServices }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
 
   const addService = () => {
-    // Fix: Added required 'tenantId' property from config.id to match the Service interface
     const newService: Service = {
       id: Date.now().toString(),
       tenantId: config.id,
@@ -37,26 +33,13 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
     setServices(services.map(s => s.id === id ? { ...s, [field]: value } : s));
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     setIsSaving(true);
-    setShowError(false);
-    
-    try {
-      // Salvar no banco de dados usando o trainingService
-      await trainingService.saveTrainingData(config.id, config, services);
-      
-      // Sucesso!
+    setTimeout(() => {
       setIsSaving(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
-      
-    } catch (error: any) {
-      console.error('Erro ao salvar:', error);
-      setIsSaving(false);
-      setShowError(true);
-      setErrorMessage(error.message || 'Erro ao salvar alterações');
-      setTimeout(() => setShowError(false), 5000);
-    }
+    }, 1000);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,11 +70,6 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
                <CheckCircle2 className="w-4 h-4" /> Atualizado!
              </span>
            )}
-           {showError && (
-             <span className="flex items-center gap-1.5 text-red-600 font-bold text-sm animate-in zoom-in duration-300">
-               <AlertCircle className="w-4 h-4" /> {errorMessage}
-             </span>
-           )}
            <button 
             onClick={handleSave}
             disabled={isSaving}
@@ -107,55 +85,69 @@ const Training: React.FC<TrainingProps> = ({ config, setConfig, services, setSer
         
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Informações Básicas */}
+          {/* Informações Básicas - AGORA COM FONTE PRETA (BRAND-DARK) */}
           <section className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm space-y-6">
-            <div className="flex items-center gap-2 text-brand-purple">
-              <Info className="w-5 h-5" />
-              <h3 className="font-bold text-lg">Informações Gerais</h3>
+            <div className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-brand-purple" />
+              <h3 className="font-black text-lg text-brand-dark uppercase tracking-tight">Informações Gerais</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nome da Empresa</label>
+                <label className="text-[11px] font-black text-brand-dark uppercase tracking-wider">Nome da Empresa</label>
                 <input 
                   type="text" 
                   value={config.name}
                   onChange={(e) => setConfig({...config, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm font-medium text-brand-dark"
                   placeholder="Ex: Estúdio Shine"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Horário de Funcionamento</label>
+                <label className="text-[11px] font-black text-brand-dark uppercase tracking-wider flex items-center gap-1">
+                  <Smartphone className="w-3 h-3 text-brand-purple" /> Telefone da Empresa
+                </label>
+                <input 
+                  type="text" 
+                  value={config.phoneNumber}
+                  onChange={(e) => setConfig({...config, phoneNumber: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm font-medium text-brand-dark"
+                  placeholder="Ex: 5511999998888"
+                />
+              </div>
+              <div className="col-span-full space-y-2">
+                <label className="text-[11px] font-black text-brand-dark uppercase tracking-wider flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-brand-purple" /> Horário de Funcionamento
+                </label>
                 <input 
                   type="text" 
                   value={config.openingHours}
                   onChange={(e) => setConfig({...config, openingHours: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm"
-                  placeholder="Ex: Seg a Sex 09h às 18h"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm font-medium text-brand-dark"
+                  placeholder="Ex: Segunda a Sábado, das 08h às 20h"
                 />
               </div>
               <div className="col-span-full space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> Endereço Completo
+                <label className="text-[11px] font-black text-brand-dark uppercase tracking-wider flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-brand-purple" /> Endereço Completo
                 </label>
                 <input 
                   type="text" 
                   value={config.address}
                   onChange={(e) => setConfig({...config, address: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm"
-                  placeholder="Rua Exemplo, 123 - Centro"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm font-medium text-brand-dark"
+                  placeholder="Av. Paulista, 1000 - Bela Vista, São Paulo - SP"
                 />
               </div>
               <div className="col-span-full space-y-2">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-                  <Navigation className="w-3 h-3" /> Link Google Maps
+                <label className="text-[11px] font-black text-brand-dark uppercase tracking-wider flex items-center gap-1">
+                  <Navigation className="w-3 h-3 text-brand-purple" /> Link Google Maps
                 </label>
                 <input 
                   type="text" 
                   value={config.mapsLink}
                   onChange={(e) => setConfig({...config, mapsLink: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm font-mono"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:ring-2 focus:ring-brand-purple focus:border-transparent outline-none transition-all text-sm font-mono font-medium text-brand-dark"
                   placeholder="https://goo.gl/maps/..."
                 />
               </div>

@@ -1,18 +1,19 @@
+
 steps:
   # Step 1: Install dependencies
   - name: 'node:18'
     entrypoint: npm
     args: ['install']
     
-  # Step 2: Build the application with environment variables
+  # Step 2: Build the application with environment variables (Baking into SPA)
   - name: 'node:18'
     entrypoint: npm
     args: ['run', 'build']
     env:
       - 'VITE_SUPABASE_URL=${_SUPABASE_URL}'
       - 'VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
-      - 'VITE_EVOLUTION_API_URL=${_EVOLUTION_URL}'
-      - 'VITE_EVOLUTION_API_KEY=${_EVOLUTION_KEY}'
+      - 'VITE_EVOLUTION_API_URL=${_EVOLUTION_API_URL}'
+      - 'VITE_EVOLUTION_API_KEY=${_EVOLUTION_API_KEY}'
     
   # Step 3: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -30,7 +31,7 @@ steps:
       - 'push'
       - 'gcr.io/$PROJECT_ID/ia-agendamentos:$BUILD_ID'
     
-  # Step 5: Deploy to Cloud Run
+  # Step 5: Deploy to Cloud Run (Update existing service)
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
@@ -44,7 +45,7 @@ steps:
       - 'us-central1'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'EVOLUTION_URL=${_EVOLUTION_URL},EVOLUTION_KEY=${_EVOLUTION_KEY},SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},SUPABASE_SERVICE_KEY=${_SUPABASE_SERVICE_KEY},GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},GOOGLE_REDIRECT_URI=${_GOOGLE_REDIRECT_URI}'
+      - 'VITE_SUPABASE_URL=${_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},VITE_EVOLUTION_API_URL=${_EVOLUTION_API_URL},VITE_EVOLUTION_API_KEY=${_EVOLUTION_API_KEY}'
 
 # Images to be pushed to Container Registry
 images:
@@ -52,22 +53,11 @@ images:
   - 'gcr.io/$PROJECT_ID/ia-agendamentos:latest'
 
 # Substitution variables
-# ATENÇÃO: Não coloque credenciais sensíveis diretamente neste arquivo!
-# Configure as variáveis sensíveis no Cloud Build Trigger como variáveis de substituição
-# ou utilize Cloud Secret Manager para maior segurança.
 substitutions:
-  # URLs públicas (não sensíveis)
   _SUPABASE_URL: 'https://ztfnnzclwvycpbapbbhb.supabase.co'
-  _EVOLUTION_URL: 'http://95.217.232.92:8080'
-  _GOOGLE_REDIRECT_URI: 'https://ia-agendamentos-870139342019.us-central1.run.app/api/calendar/callback'
-  
-  # Chaves e tokens sensíveis - DEVEM ser configurados no Cloud Build Trigger
-  # NÃO commitar valores reais para o repositório!
-  _SUPABASE_ANON_KEY: ''  # Configurar no Cloud Build Trigger
-  _SUPABASE_SERVICE_KEY: ''  # Configurar no Cloud Build Trigger
-  _EVOLUTION_KEY: ''  # Configurar no Cloud Build Trigger
-  _GOOGLE_CLIENT_ID: ''  # Configurar no Cloud Build Trigger
-  _GOOGLE_CLIENT_SECRET: ''  # Configurar no Cloud Build Trigger
+  _SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0Zm5uemNsd3Z5Y3BiYXBiYmhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyNjM5NjIsImV4cCI6MjA4NDgzOTk2Mn0.j2J1E6xOQw_qKV4vY-FP0U_-ImmBqAWbzWGZ5hhcR1g'
+  _EVOLUTION_API_URL: 'https://api.iafabiana.com.br'
+  _EVOLUTION_API_KEY: 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'
 
 timeout: 1200s
 

@@ -1,205 +1,133 @@
 
-import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Loader2, Database, AlertCircle } from 'lucide-react';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import Agents from './views/Agents';
 import Training from './views/Training';
-import ChatSimulation from './views/ChatSimulation';
+import ChatMonitor from './views/ChatMonitor';
 import Connections from './views/Connections';
-import Architecture from './views/Architecture';
 import Appointments from './views/Appointments';
 import PlanAndCredits from './views/PlanAndCredits';
 import AdminDashboard from './views/AdminDashboard';
-import TenantManagement from './views/TenantManagement';
-import Login from './views/Login';
+import { dbService } from './services/dbService';
 import { AppRoute, Service, BusinessConfig, Appointment, AIConfig, UserCredits } from './types';
-import { supabase } from './services/supabase';
-import { authService } from './services/authService';
-import { tenantService } from './services/tenantService';
 
 const App: React.FC = () => {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(AppRoute.DASHBOARD);
   const [isWaConnected, setIsWaConnected] = useState(false);
+  const [dbConnected, setDbConnected] = useState<'checking' | 'online' | 'offline'>('checking');
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   
-  // Ler tenant_id da URL ou usar padrão
-  const getTenantIdFromUrl = (): string => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tenantParam = urlParams.get('tenant');
-    
-    // Se tem tenant na URL, é um cliente acessando
-    if (tenantParam) {
-      setUserRole('user');
-      return tenantParam;
-    }
-    
-    // Se não tem tenant na URL, é admin
-    // Usar tenant padrão para compatibilidade
-    return '550e8400-e29b-41d4-a716-446655440000';
-  };
-
-  const currentTenantId = getTenantIdFromUrl();
+  const currentTenantId = '550e8400-e29b-41d4-a716-446655440000';
 
   const [credits, setCredits] = useState<UserCredits>({
-    balance: 150, 
-    totalLimit: 1000, 
-    planName: 'Prata', 
-    usageThisMonth: 0, 
-    tokensTotal: 0
+    balance: 0, totalLimit: 5000, planName: 'Prata', usageThisMonth: 0 
   });
 
   const [aiConfig, setAiConfig] = useState<AIConfig>({
-    id: 'Sofia_Agente', 
-    tenantId: currentTenantId, 
-    provider: 'gemini', 
-    model: 'gemini-3-flash-preview',
-    temperature: 0.7, 
-    maxTokens: 2048, 
-    name: 'Sofia', 
-    behavior: 'Você é um assistente profissional da Estúdio Shine. Seu tom de voz é elegante e prestativo.', 
-    useMasterKey: true, 
-    botActive: true
+    id: 'Sofia_Agente', tenantId: currentTenantId, provider: 'gemini', 
+    model: 'gemini-3-flash-preview', temperature: 0.7, maxTokens: 2048, 
+    name: 'Sofia', behavior: 'Você é um assistente profissional da Estúdio Shine.', 
+    useMasterKey: true, botActive: true
   });
 
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    { id: 'a1', tenantId: currentTenantId, customerName: 'Maria Silva', phoneNumber: '11999999999', serviceId: 's1', serviceName: 'Corte Feminino', date: new Date().toISOString(), status: 'confirmed', value: 120 }
-  ]);
-
-  const [services, setServices] = useState<Service[]>([
-    { id: 's1', tenantId: currentTenantId, name: 'Corte Feminino', price: 120, duration: 60 },
-    { id: 's2', tenantId: currentTenantId, name: 'Escova Modelada', price: 80, duration: 45 }
-  ]);
-
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [config, setConfig] = useState<BusinessConfig>({
-    id: currentTenantId, name: 'Estúdio Shine', address: 'Av. Paulista, 1000 - São Paulo',
-    mapsLink: 'https://goo.gl/maps/shine', openingHours: 'Seg a Sáb, 08h-20h',
-    cancellationPolicy: 'Aviso prévio 2h', minAdvanceTime: 2,
-    promotion: { enabled: true, description: '20% OFF na primeira visita!', callToAction: 'Gostaria de agendar agora?', imageData: '' }
+    id: currentTenantId, name: 'Carregando...', phoneNumber: '',
+    address: '', mapsLink: '', openingHours: '',
+    cancellationPolicy: '', minAdvanceTime: 2,
+    promotion: { enabled: false, description: '', callToAction: '', imageData: '' }
   });
 
-  // Verificar autenticação ao carregar
-  useEffect(() => {
-    checkAuthentication();
-  }, []);
-
-  const checkAuthentication = async () => {
-    setCheckingAuth(true);
-    
-    // Se tem tenant na URL, não precisa de autenticação (é um cliente)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tenant')) {
-      setIsAuthenticated(true);
-      setUserRole('user');
-      setCheckingAuth(false);
-      loadTenantData(urlParams.get('tenant')!);
-      return;
-    }
-
-    // Se não tem tenant na URL, precisa de autenticação (é admin)
-    const hasSession = await authService.hasActiveSession();
-    setIsAuthenticated(hasSession);
-    
-    if (hasSession) {
-      setUserRole('admin');
-      setActiveRoute(AppRoute.ADMIN);
-    }
-    
-    setCheckingAuth(false);
-  };
-
-  const loadTenantData = async (tenantId: string) => {
+  const refreshData = useCallback(async () => {
     try {
-      const tenant = await tenantService.getTenant(tenantId);
-      if (tenant) {
-        setCredits({
-          balance: tenant.saldo_creditos,
-          totalLimit: 1000,
-          planName: tenant.plano,
-          usageThisMonth: 0,
-          tokensTotal: 0,
-        });
-        setConfig(prev => ({ ...prev, name: tenant.nome_negocio }));
-      }
+      const isConnected = await dbService.checkConnection();
+      setDbConnected(isConnected ? 'online' : 'offline');
+
+      const [dbConfig, dbServices, dbAppointments] = await Promise.all([
+        dbService.getBusinessConfig(currentTenantId),
+        dbService.getServices(currentTenantId),
+        dbService.getAppointments(currentTenantId)
+      ]);
+
+      if (dbConfig) setConfig(dbConfig);
+      if (dbServices.length > 0) setServices(dbServices);
+      setAppointments(dbAppointments);
+      setCredits(prev => ({ ...prev, balance: 240 })); 
     } catch (error) {
-      console.error('Erro ao carregar dados do tenant:', error);
+      console.error("Erro ao sincronizar dados:", error);
+      setDbConnected('offline');
     }
-  };
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    setUserRole('admin');
-    setActiveRoute(AppRoute.ADMIN);
-  };
-
-  const handleLogout = async () => {
-    await authService.logout();
-    setIsAuthenticated(false);
-    setUserRole('user');
-    setActiveRoute(AppRoute.DASHBOARD);
-  };
+  }, [currentTenantId]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    refreshData().then(() => setIsLoading(false));
+  }, [refreshData]);
 
-  const handleNewAppointment = (apt: Appointment) => {
-    setAppointments(prev => [apt, ...prev]);
+  const handleUpdateConfig = async (newConfig: BusinessConfig) => {
+    setConfig(newConfig);
+    await dbService.updateBusinessConfig(newConfig);
   };
 
-  // Se está verificando autenticação, mostrar loading
-  if (checkingAuth) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-brand-purple via-brand-dark to-brand-blue">
-        <Loader2 className="animate-spin text-white w-10 h-10" />
-      </div>
-    );
-  }
-
-  // Se não está autenticado e não tem tenant na URL, mostrar login
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
-  }
+  const handleSaveServices = async (newServices: Service[]) => {
+    setServices(newServices);
+    for (const s of newServices) await dbService.saveService(s);
+  };
 
   const renderContent = () => {
-    if (isLoading) return <div className="flex h-screen items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-brand-purple w-10 h-10" /></div>;
+    if (isLoading) return (
+      <div className="flex h-screen flex-col items-center justify-center bg-brand-dark text-white space-y-6">
+        <Loader2 className="animate-spin text-brand-purple w-12 h-12" />
+        <div className="text-center">
+           <h2 className="text-xl font-black uppercase tracking-widest">Iniciando Protocolos SaaS</h2>
+           <p className="text-[10px] text-slate-500 uppercase font-black mt-2 tracking-[0.3em]">Checking Supabase Cluster...</p>
+        </div>
+      </div>
+    );
+
+    if (dbConnected === 'offline') {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-10">
+          <div className="bg-white p-12 rounded-[4rem] border border-slate-200 shadow-2xl text-center max-w-md space-y-8 animate-in zoom-in">
+             <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <AlertCircle className="w-12 h-12" />
+             </div>
+             <div>
+                <h3 className="text-2xl font-black text-brand-dark uppercase tracking-tighter">Banco de Dados Offline</h3>
+                <p className="text-sm text-slate-400 mt-2">Não foi possível estabelecer conexão com o cluster de dados Supabase. Verifique suas chaves de API.</p>
+             </div>
+             <button onClick={() => window.location.reload()} className="w-full bg-brand-dark text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs">
+                Tentar Reconectar
+             </button>
+          </div>
+        </div>
+      );
+    }
 
     switch (activeRoute) {
       case AppRoute.DASHBOARD: return <Dashboard credits={credits} />;
       case AppRoute.AGENTS: return <Agents config={aiConfig} onSave={setAiConfig} credits={credits} />;
       case AppRoute.APPOINTMENTS: return <Appointments appointments={appointments} />;
-      case AppRoute.TRAINING: return <Training config={config} setConfig={setConfig} services={services} setServices={setServices} />;
+      case AppRoute.TRAINING: return <Training config={config} setConfig={handleUpdateConfig} services={services} setServices={handleSaveServices} />;
       case AppRoute.CONNECTIONS: 
         return (
           <Connections 
             tenantId={currentTenantId} 
             businessName={config.name} 
+            registeredPhone={config.phoneNumber} 
             isConnected={isWaConnected} 
-            onConnectionChange={setIsWaConnected} 
+            onConnectionChange={setIsWaConnected}
+            onUpdateConfig={setConfig}
+            currentConfig={config}
           />
         );
-      case AppRoute.CHAT_DEMO: 
-        return (
-          <ChatSimulation 
-            config={config} 
-            services={services} 
-            appointments={appointments} 
-            aiConfig={aiConfig} 
-            credits={credits} 
-            setCredits={setCredits} 
-            onNewAppointment={handleNewAppointment} 
-            onNavigate={setActiveRoute}
-          />
-        );
+      case AppRoute.CHAT_MONITOR: 
+        return <ChatMonitor config={config} aiConfig={aiConfig} credits={credits} isConnected={isWaConnected} onNavigate={setActiveRoute} services={services} appointments={appointments} onRefreshData={refreshData} />;
       case AppRoute.PLAN_AND_CREDITS: return <PlanAndCredits credits={credits} setCredits={setCredits} onNavigate={setActiveRoute} />;
-      case AppRoute.ADMIN: 
-        return userRole === 'admin' ? <TenantManagement /> : <AdminDashboard />;
+      case AppRoute.ADMIN: return <AdminDashboard />;
       default: return <Dashboard credits={credits} />;
     }
   };
@@ -214,7 +142,6 @@ const App: React.FC = () => {
       businessName={config.name} 
       userRole={userRole} 
       onRoleSwitch={setUserRole}
-      onLogout={userRole === 'admin' ? handleLogout : undefined}
     >
       {renderContent()}
     </Layout>

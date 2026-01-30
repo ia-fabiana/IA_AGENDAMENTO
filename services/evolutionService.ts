@@ -1,23 +1,22 @@
+
 import { Instance } from '../types';
 
 /**
- * EVOLUTION API SERVICE - SaaS EDITION
- * Gerencia instâncias únicas por cliente (Tenant)
+ * EVOLUTION API SERVICE - v1.7.4 PRODUCTION
+ * Configurado para o domínio seguro https://api.iafabiana.com.br
  */
 
-// ✅ CORRIGIDO: URL HTTPS com SSL
 export const EVOLUTION_API_URL = 'https://api.iafabiana.com.br';
-
-// ✅ CORRIGIDO: API key real
-const EVOLUTION_API_KEY = 'minha_chave_secreta_123';
+export const EVOLUTION_API_KEY = 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'; 
 
 export const evolutionService = {
-  // Gera um nome de instância seguro baseado no Tenant ID
-  formatInstanceName: (tenantId: string ) => `ia_tenant_${tenantId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
+  formatInstanceName: (businessName: string) => {
+    // Gera um nome de instância limpo baseado no nome do negócio
+    return `IA_${businessName.replace(/\s+/g, '_').toUpperCase().substring(0, 15)}`;
+  },
 
-  // Cria ou recupera uma instância para um cliente específico
-  createInstance: async (tenantId: string): Promise<Instance> => {
-    const instanceName = evolutionService.formatInstanceName(tenantId);
+  createInstance: async (businessName: string): Promise<Instance> => {
+    const instanceName = evolutionService.formatInstanceName(businessName);
     
     try {
       const response = await fetch(`${EVOLUTION_API_URL}/instance/create`, {
@@ -28,64 +27,61 @@ export const evolutionService = {
         },
         body: JSON.stringify({
           instanceName: instanceName,
-          token: `tok_${tenantId.substring(0, 5)}`,
-          qrcode: true
+          token: `tok_${instanceName}`,
+          qrcode: true,
+          number: ""
         })
       });
 
       const data = await response.json();
       
-      // Caso a instância já exista no Evolution Manager
       if (response.status === 403 || response.status === 409 || (data.message && data.message.includes('exists'))) {
         return {
           id: instanceName,
-          tenant_id: tenantId,
+          tenant_id: 'prod',
           instance_name: instanceName,
           evolution_token: 'existing',
           status_conexao: 'connecting'
         };
       }
 
-      if (!response.ok) throw new Error(data.message || 'Erro ao processar instância');
-
       return {
         id: data.instance?.instanceId || instanceName,
-        tenant_id: tenantId,
+        tenant_id: 'prod',
         instance_name: instanceName,
         evolution_token: data.hash || data.token,
         status_conexao: 'connecting'
       };
     } catch (error: any) {
-      if (error.message.includes('fetch') || error.message.includes('NetworkError')) {
-        throw new Error("BLOCK_CORS");
-      }
+      if (error.name === 'TypeError') throw new Error("PROTOCOL_MISMATCH");
       throw error;
     }
   },
 
-  // Busca o QR Code (sempre gera um novo se necessário)
   getQRCode: async (instanceName: string): Promise<string> => {
-    const response = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
-      method: 'GET',
-      headers: { 'apikey': EVOLUTION_API_KEY }
-    });
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
+        method: 'GET',
+        headers: { 'apikey': EVOLUTION_API_KEY }
+      });
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.message || 'Falha ao obter QR Code');
+      if (!response.ok) throw new Error("RETRY");
+
+      const data = await response.json();
+      const base64String = data.base64 || data.code || (data.qrcode && data.qrcode.base64);
+      
+      if (base64String && base64String.length > 50) {
+        return base64String.startsWith('data:image') 
+          ? base64String 
+          : `data:image/png;base64,${base64String}`;
+      }
+      throw new Error("WAITING");
+    } catch (e: any) {
+      if (e.name === 'TypeError') throw new Error("PROTOCOL_MISMATCH");
+      throw e;
     }
-
-    const data = await response.json();
-    const base64String = data.base64 || data.code?.base64 || data.qrcode?.base64;
-    
-    if (!base64String) throw new Error('O servidor está processando o QR Code...');
-
-    return base64String.startsWith('data:image') 
-      ? base64String 
-      : `data:image/png;base64,${base64String}`;
   },
 
-  // Verifica o estado real no WhatsApp
   validateHandshake: async (instanceName: string): Promise<{connected: boolean, number?: string}> => {
     try {
       const response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
@@ -93,9 +89,9 @@ export const evolutionService = {
         headers: { 'apikey': EVOLUTION_API_KEY }
       });
       const data = await response.json();
-      const isOpen = data.instance?.state === 'open' || data.state === 'open';
+      const state = data.instance?.state || data.state || data.status;
       return { 
-        connected: isOpen, 
+        connected: ['open', 'CONNECTED'].includes(state), 
         number: data.instance?.ownerJid || data.instance?.number 
       };
     } catch {

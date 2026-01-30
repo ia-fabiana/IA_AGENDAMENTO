@@ -1,48 +1,53 @@
 
--- Habilitar a extensão para UUIDs se necessário
+-- Habilitar a extensão para UUIDs
 create extension if not exists "pgcrypto";
 
--- Tabela de Tenants (Clientes/Salões)
-create table tenants (
+-- Tabela de Tenants
+create table if not exists tenants (
   id uuid default gen_random_uuid() primary key,
   nome_negocio text not null,
-  plano text default 'Bronze' check (plano in ('Bronze', 'Prata', 'Ouro', 'Grátis')),
+  whatsapp_oficial text,
+  endereco text,
+  link_maps text,
+  horario_funcionamento text,
+  politica_cancelamento text,
+  antecedencia_minima integer default 2,
+  config_promocao jsonb default '{"enabled": false, "description": "", "callToAction": ""}'::jsonb,
+  plano text default 'Prata',
   saldo_creditos integer default 100,
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- Tabela de Agentes (Configuração de IA por Tenant)
-create table agentes (
+-- Tabela de Serviços
+create table if not exists servicos (
   id uuid default gen_random_uuid() primary key,
   tenant_id uuid references tenants(id) on delete cascade not null,
-  nome_agente text not null default 'Assistente',
-  provider text not null check (provider in ('openai', 'gemini')) default 'gemini',
-  model text not null default 'gemini-3-flash-preview',
-  system_prompt text,
-  temperature float default 0.7,
-  max_tokens integer default 2048,
-  openai_key text,
-  bot_active boolean default true,
-  created_at timestamp with time zone default timezone('utc'::text, now()),
-  unique(tenant_id) -- Cada tenant tem uma configuração principal
+  name text not null,
+  price numeric(10,2) not null,
+  duration integer not null,
+  created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- Tabela de Mensagens/Logs de Consumo
-create table mensagens (
+-- Tabela de Agendamentos
+create table if not exists agendamentos (
   id uuid default gen_random_uuid() primary key,
   tenant_id uuid references tenants(id) on delete cascade not null,
-  tokens_usados integer default 0,
-  mensagem_in text,
-  mensagem_out text,
-  data timestamp with time zone default timezone('utc'::text, now())
+  cliente_nome text not null,
+  cliente_fone text not null,
+  servico_id uuid references servicos(id),
+  servico_nome text,
+  data_hora timestamp with time zone not null,
+  status text default 'confirmed',
+  valor numeric(10,2),
+  created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
--- Inserir um Tenant de teste (ID fixo para compatibilidade com o frontend atual)
+-- Dados de Exemplo para o Tenant fixo (Estúdio Shine)
 insert into tenants (id, nome_negocio, plano, saldo_creditos)
-values ('550e8400-e29b-41d4-a716-446655440000', 'Estúdio Shine', 'Prata', 150)
+values ('550e8400-e29b-41d4-a716-446655440000', 'Estúdio Shine', 'Prata', 240)
 on conflict (id) do nothing;
 
--- Inserir configuração inicial do Agente para o Tenant de teste
-insert into agentes (tenant_id, nome_agente, provider, model, system_prompt)
-values ('550e8400-e29b-41d4-a716-446655440000', 'Sofia', 'gemini', 'gemini-3-flash-preview', 'Você é um assistente profissional da Estúdio Shine...')
-on conflict (tenant_id) do nothing;
+insert into servicos (tenant_id, name, price, duration)
+values ('550e8400-e29b-41d4-a716-446655440000', 'Corte Feminino', 120.00, 60),
+       ('550e8400-e29b-41d4-a716-446655440000', 'Escova Modelada', 80.00, 45)
+on conflict do nothing;

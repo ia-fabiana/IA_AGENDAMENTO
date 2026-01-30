@@ -20,14 +20,29 @@ export interface AIConfig {
   behavior: string;
   openaiKey?: string;
   useMasterKey: boolean;
-  botActive: boolean; // Novo: Controle de ativação do bot
+  botActive: boolean; 
+}
+
+export interface DeploymentLog {
+  id: string;
+  step: string;
+  status: 'pending' | 'running' | 'success' | 'failed';
+  timestamp: string;
+}
+
+export interface GitHubSyncInfo {
+  repo: string;
+  branch: string;
+  lastCommit: string;
+  status: 'synced' | 'outdated' | 'error';
+  lastBuildId?: string;
 }
 
 export interface Tenant {
   id: string;
   nome_salao: string;
   owner_id: string;
-  status_assinatura: 'active' | 'suspended' | 'trial';
+  status_assinatura: 'active' | 'suspended';
   saldo_creditos: number;
 }
 
@@ -40,20 +55,10 @@ export interface Instance {
   whatsapp_number?: string;
 }
 
-export interface ChatLog {
-  id: string;
-  instance_id: string;
-  phone_number: string;
-  message_in: string;
-  message_out: string;
-  tokens_used: number;
-  timestamp: Date;
-}
-
 export interface UserCredits {
   balance: number;
   totalLimit: number;
-  planName: 'Bronze' | 'Prata' | 'Ouro' | 'Grátis';
+  planName: 'Bronze' | 'Prata' | 'Ouro' | 'Empresarial';
   usageThisMonth: number;
   tokensTotal?: number;
 }
@@ -61,6 +66,7 @@ export interface UserCredits {
 export interface BusinessConfig {
   id: string;
   name: string;
+  phoneNumber: string; 
   address: string;
   mapsLink: string;
   openingHours: string;
@@ -100,7 +106,7 @@ export enum AppRoute {
   APPOINTMENTS = 'appointments',
   TRAINING = 'training',
   CONNECTIONS = 'connections',
-  CHAT_DEMO = 'chat_demo',
+  CHAT_MONITOR = 'chat_monitor',
   PLAN_AND_CREDITS = 'plan_and_credits',
   ADMIN = 'admin',
   DOCS = 'docs'
@@ -111,7 +117,7 @@ export interface TenantInfo {
   name: string;
   owner: string;
   plan: string;
-  status: 'active' | 'suspended' | 'trial';
+  status: 'active' | 'suspended';
   consumption: number;
   lastActive: string;
 }
@@ -121,9 +127,9 @@ export interface GlobalAdminMetrics {
   totalRevenue: number;
   totalTokensConsumed: number;
   serverStatus: 'healthy' | 'warning' | 'down';
+  githubSync: GitHubSyncInfo;
 }
 
-// Fixed missing export for DashboardMetrics
 export interface DashboardMetrics {
   totalRevenue: number;
   conversionRate: number;
