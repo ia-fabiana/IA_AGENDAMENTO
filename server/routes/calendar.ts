@@ -1,22 +1,13 @@
 import express from 'express';
-import { rateLimit } from 'express-rate-limit';
 import { getAuthUrl, getTokensFromCode, checkAvailability } from '../googleCalendar';
 import { logger } from '../logger';
 import { supabase } from '../../services/supabase';
+import { authLimiter } from '../rateLimit';
 
 const router = express.Router();
 
-// Rate limiter for OAuth endpoints
-const oauthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per windowMs
-  message: 'Too many OAuth requests from this IP, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // Get Google OAuth authorization URL
-router.get('/auth-url', (req, res) => {
+router.get('/auth-url', authLimiter, (req, res) => {
   try {
     const authUrl = getAuthUrl();
     res.json({ authUrl });
@@ -27,7 +18,7 @@ router.get('/auth-url', (req, res) => {
 });
 
 // Handle OAuth callback and save tokens
-router.post('/oauth-callback', oauthLimiter, async (req, res) => {
+router.post('/oauth-callback', authLimiter, async (req, res) => {
   try {
     const { code, tenantId } = req.body;
 

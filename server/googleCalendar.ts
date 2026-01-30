@@ -54,10 +54,10 @@ export const getTokensFromCode = async (code: string): Promise<string> => {
     // Encrypt tokens before storing
     const encryptedTokens = encryptOAuthToken({
       access_token: tokens.access_token!,
-      refresh_token: tokens.refresh_token,
-      expiry_date: tokens.expiry_date,
+      refresh_token: tokens.refresh_token ?? undefined,
+      expiry_date: tokens.expiry_date ?? undefined,
       scope: tokens.scope,
-      token_type: tokens.token_type
+      token_type: tokens.token_type ?? undefined
     });
     
     return encryptedTokens;
