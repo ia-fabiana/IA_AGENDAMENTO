@@ -3,6 +3,7 @@ import { supabase } from '../../services/supabase';
 import { createCalendarEvent, deleteCalendarEvent } from '../googleCalendar';
 import { logger } from '../logger';
 import { canAccess, logActivity } from '../rbac';
+import { appointmentsCreated, calendarSyncCounter } from '../monitoring';
 
 const router = express.Router();
 
@@ -59,9 +60,11 @@ router.post('/', async (req, res) => {
 
         googleCalendarEventId = calendarEvent.id;
         googleCalendarSynced = true;
+        calendarSyncCounter.labels('true', 'create').inc();
         logger.info({ appointmentId: appointment.id, calendarEventId: googleCalendarEventId }, 'Google Calendar event created');
       } catch (calendarError: any) {
         googleCalendarSyncError = calendarError.message;
+        calendarSyncCounter.labels('false', 'create').inc();
         logger.warn({ error: calendarError, appointmentId: appointment.id }, 'Failed to create Google Calendar event');
       }
     }
@@ -95,6 +98,9 @@ router.post('/', async (req, res) => {
         { customerName: appointment.customerName, serviceName: appointment.serviceName }
       );
     }
+
+    // Track metrics
+    appointmentsCreated.labels(tenantId).inc();
 
     res.json({ 
       appointment: data,
@@ -173,8 +179,10 @@ router.delete('/:id', async (req, res) => {
           appointment.tenants.google_oauth_token,
           appointment.google_calendar_event_id
         );
+        calendarSyncCounter.labels('true', 'delete').inc();
         logger.info({ appointmentId: id }, 'Deleted from Google Calendar');
       } catch (calendarError: any) {
+        calendarSyncCounter.labels('false', 'delete').inc();
         logger.error({ error: calendarError, appointmentId: id }, 'Failed to delete from Google Calendar');
         // Mark the appointment for reconciliation instead of failing the entire operation
         await supabase

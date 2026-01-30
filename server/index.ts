@@ -5,6 +5,15 @@ import appointmentsRouter from './routes/appointments';
 import calendarRouter from './routes/calendar';
 import authRouter from './routes/auth';
 import { logger } from './logger';
+import { globalLimiter, writeLimiter } from './rateLimit';
+import { 
+  httpRequestCounter, 
+  httpRequestDuration, 
+  activeConnections,
+  getMetrics,
+  getMetricsJSON 
+} from './monitoring';
+import { performHealthCheck, checkReadiness, checkLiveness } from './health';
 
 // Load environment variables
 dotenv.config();
@@ -19,24 +28,80 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Request logging middleware
+// Apply rate limiting
+app.use(globalLimiter);
+app.use(writeLimiter);
+
+// Metrics middleware - track active connections
 app.use((req, res, next) => {
+  activeConnections.inc();
+  res.on('finish', () => {
+    activeConnections.dec();
+  });
+  next();
+});
+
+// Request logging and metrics middleware
+app.use((req, res, next) => {
+  const startTime = Date.now();
+
   logger.info({
     method: req.method,
     path: req.path,
     query: req.query,
     ip: req.ip
   }, 'Incoming request');
+
+  // Track request completion
+  res.on('finish', () => {
+    const duration = (Date.now() - startTime) / 1000;
+    const route = req.route?.path || req.path;
+
+    // Record metrics
+    httpRequestCounter.labels(req.method, route, res.statusCode.toString()).inc();
+    httpRequestDuration.labels(req.method, route, res.statusCode.toString()).observe(duration);
+  });
+
   next();
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+// Health checks
+app.get('/health', async (req, res) => {
+  const health = await performHealthCheck();
+  const statusCode = health.status === 'healthy' ? 200 : 
+                     health.status === 'degraded' ? 200 : 503;
+  res.status(statusCode).json(health);
+});
+
+app.get('/health/ready', async (req, res) => {
+  const ready = await checkReadiness();
+  res.status(ready ? 200 : 503).json({ ready });
+});
+
+app.get('/health/live', (req, res) => {
+  const alive = checkLiveness();
+  res.status(alive ? 200 : 503).json({ alive });
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', 'text/plain');
+    const metrics = await getMetrics();
+    res.send(metrics);
+  } catch (error: any) {
+    res.status(500).send(error.message);
+  }
+});
+
+// Metrics JSON endpoint (for debugging)
+app.get('/metrics/json', async (req, res) => {
+  try {
+    const metrics = await getMetricsJSON();
+    res.json(metrics);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // API Routes
