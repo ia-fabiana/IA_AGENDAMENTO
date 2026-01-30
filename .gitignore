@@ -18,6 +18,10 @@ dist-ssr
 .env.production
 .env.development
 
+# Test coverage
+coverage
+.nyc_output
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
