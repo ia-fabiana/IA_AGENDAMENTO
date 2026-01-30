@@ -17,7 +17,7 @@ import {
   Globe,
   Key,
   Database,
-  CloudZap
+  Cloud
 } from 'lucide-react';
 import { AppRoute, AIProvider, UserCredits } from '../types';
 
@@ -166,7 +166,7 @@ const Layout: React.FC<LayoutProps> = ({
           {/* Badge de Ambiente para o Lojista */}
           {!isAdmin && (
             <div className="mb-4 px-4 py-3 bg-brand-green/5 rounded-2xl border border-brand-green/10 flex items-center gap-3">
-               <CloudZap className="w-4 h-4 text-brand-green" />
+               <Cloud className="w-4 h-4 text-brand-green" />
                <div>
                   <p className="text-[9px] font-black text-brand-green uppercase tracking-widest">Produção Ativa</p>
                   <p className="text-[8px] text-slate-500 font-bold">Ambiente Criptografado</p>

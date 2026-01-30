@@ -71,6 +71,17 @@ const ChatSimulation: React.FC<ChatSimulationProps> = ({
 
           if (fc.name === 'book_appointment') {
             const { serviceId, date } = fc.args;
+            
+            // Validate required fields
+            if (!date) {
+              setMessages(prev => [...prev, { 
+                role: 'model', 
+                text: 'Desculpe, não consegui processar a data do agendamento. Por favor, tente novamente.', 
+                timestamp: new Date() 
+              }]);
+              continue;
+            }
+            
             const service = services.find(s => s.id === serviceId) || services[0];
             const newApt: Appointment = {
               id: `apt_${Date.now()}`,
@@ -79,14 +90,14 @@ const ChatSimulation: React.FC<ChatSimulationProps> = ({
               phoneNumber: '11999998888',
               serviceId: service.id,
               serviceName: service.name,
-              date,
+              date: date as string,
               status: 'confirmed',
               value: service.price
             };
             if (onNewAppointment) onNewAppointment(newApt);
             setMessages(prev => [...prev, { 
               role: 'model', 
-              text: `✨ Reserva concluída! Marquei seu horário de **${service.name}** para o dia **${new Date(date).toLocaleString('pt-BR')}**. Te esperamos lá!`, 
+              text: `✨ Reserva concluída! Marquei seu horário de **${service.name}** para o dia **${new Date(date as string).toLocaleString('pt-BR')}**. Te esperamos lá!`, 
               timestamp: new Date() 
             }]);
           } else if (fc.name === 'get_services') {
