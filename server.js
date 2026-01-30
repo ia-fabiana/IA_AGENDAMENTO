@@ -422,6 +422,157 @@ app.post('/api/calendar/disconnect', async (req, res) => {
   }
 });
 
+// Webhook Mercado Pago - Receber notificações de pagamento
+app.post('/api/mercado-pago/webhook', async (req, res) => {
+  try {
+    console.log('💳 Webhook Mercado Pago recebido:', JSON.stringify(req.body, null, 2));
+    
+    const { action, data, type } = req.body;
+    
+    // Responder imediatamente para o Mercado Pago
+    res.status(200).json({ received: true });
+    
+    // Processar apenas pagamentos aprovados
+    if (action === 'payment.created' || action === 'payment.updated') {
+      const paymentId = data?.id;
+      
+      if (!paymentId) {
+        console.log('⚠️ Webhook sem ID de pagamento');
+        return;
+      }
+      
+      console.log(`💰 Processando pagamento ID: ${paymentId}`);
+      
+      // Importar dependências
+      const { createClient } = await import('@supabase/supabase-js');
+      const axios = (await import('axios')).default;
+      
+      const supabase = createClient(
+        process.env.SUPABASE_URL || 'https://ztfnnzclwvycpbapbbhb.supabase.co',
+        process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+      );
+      
+      // Buscar detalhes do pagamento na API do Mercado Pago
+      const MERCADO_PAGO_ACCESS_TOKEN = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      
+      if (!MERCADO_PAGO_ACCESS_TOKEN) {
+        console.error('❌ MERCADO_PAGO_ACCESS_TOKEN não configurado');
+        return;
+      }
+      
+      try {
+        const paymentResponse = await axios.get(
+          `https://api.mercadopago.com/v1/payments/${paymentId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`
+            }
+          }
+        );
+        
+        const payment = paymentResponse.data;
+        console.log(`📊 Status do pagamento: ${payment.status}`);
+        
+        // Processar apenas se aprovado
+        if (payment.status === 'approved') {
+          // Extrair informações do pagamento
+          const amount = payment.transaction_amount;
+          const paymentMethod = payment.payment_method_id;
+          
+          // Determinar quantos créditos adicionar baseado no valor
+          // Mapear valores para pacotes
+          const creditsPacks = {
+            47: 500,    // Pack Start
+            147: 2500,  // Pack Professional
+            497: 10000  // Pack Enterprise
+          };
+          
+          const creditsToAdd = creditsPacks[amount] || Math.floor(amount * 10); // 1 real = 10 créditos (fallback)
+          
+          // Buscar tenantId do metadata do pagamento
+          const tenantId = payment.metadata?.tenant_id || 'test-tenant-id';
+          
+          // Verificar se já processamos este pagamento
+          const { data: existingTransaction } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('external_id', paymentId)
+            .single();
+          
+          if (existingTransaction) {
+            console.log('⚠️ Pagamento já processado anteriormente');
+            return;
+          }
+          
+          // Criar transação no banco
+          const { data: transaction, error: transactionError } = await supabase
+            .from('transactions')
+            .insert({
+              tenant_id: tenantId,
+              external_id: paymentId,
+              type: 'credit_purchase',
+              amount: amount,
+              credits_added: creditsToAdd,
+              status: 'approved',
+              payment_method: paymentMethod,
+              metadata: payment
+            })
+            .select()
+            .single();
+          
+          if (transactionError) {
+            console.error('❌ Erro ao criar transação:', transactionError);
+            return;
+          }
+          
+          // Atualizar saldo de créditos do tenant
+          const { data: tenant, error: tenantError } = await supabase
+            .from('tenants')
+            .select('saldo_creditos')
+            .eq('id', tenantId)
+            .single();
+          
+          if (tenantError) {
+            console.error('❌ Erro ao buscar tenant:', tenantError);
+            return;
+          }
+          
+          const newBalance = (tenant.saldo_creditos || 0) + creditsToAdd;
+          
+          const { error: updateError } = await supabase
+            .from('tenants')
+            .update({ 
+              saldo_creditos: newBalance,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', tenantId);
+          
+          if (updateError) {
+            console.error('❌ Erro ao atualizar créditos:', updateError);
+            return;
+          }
+          
+          console.log(`✅ Pagamento processado com sucesso!`);
+          console.log(`   Tenant: ${tenantId}`);
+          console.log(`   Valor: R$ ${amount}`);
+          console.log(`   Créditos adicionados: ${creditsToAdd}`);
+          console.log(`   Novo saldo: ${newBalance}`);
+          
+          // TODO: Enviar email de confirmação ao cliente
+          // TODO: Notificar o tenant via WhatsApp
+        } else {
+          console.log(`⏳ Pagamento em status: ${payment.status} - Aguardando aprovação`);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao buscar dados do pagamento:', error.message);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erro ao processar webhook Mercado Pago:', error);
+    // Não retornar erro para não quebrar o webhook
+  }
+});
+
 // Admin Dashboard - Métricas globais
 app.get('/api/admin/metrics', async (req, res) => {
   try {

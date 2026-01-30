@@ -40,17 +40,41 @@ const PlanAndCredits: React.FC<PlanAndCreditsProps> = ({ credits, setCredits, on
     setPaymentStep('method');
   };
 
-  const startPaymentProcess = (type: 'pix' | 'card') => {
+  const startPaymentProcess = async (type: 'pix' | 'card') => {
     setPaymentStep('processing');
     
-    // Simula a resposta do Webhook do Mercado Pago (Segurança e Rapidez)
-    setTimeout(() => {
-      setCredits((prev: UserCredits) => ({
-        ...prev,
-        balance: prev.balance + (selectedPack?.msgs || 0)
-      }));
-      setPaymentStep('success');
-    }, 2500);
+    try {
+      // Em produção, iniciar pagamento real com Mercado Pago
+      // Por enquanto, simular para não precisar de credenciais
+      const USE_REAL_PAYMENT = false; // Trocar para true quando configurar Mercado Pago
+      
+      if (USE_REAL_PAYMENT && window.MercadoPago) {
+        // Código real do Mercado Pago (implementar quando tiver credenciais)
+        // const mp = new window.MercadoPago(PUBLIC_KEY);
+        // const preference = await criarPreferenciaPagamento();
+        // etc...
+        console.log('🔐 Iniciar pagamento real com Mercado Pago');
+      } else {
+        // Simulação para desenvolvimento (webhook virá quando pagamento for aprovado)
+        console.log('🧪 Modo simulação - aguardando webhook fictício');
+        
+        setTimeout(() => {
+          // Simula o que o webhook faria: adicionar créditos
+          setCredits((prev: UserCredits) => ({
+            ...prev,
+            balance: prev.balance + (selectedPack?.msgs || 0)
+          }));
+          setPaymentStep('success');
+          
+          console.log('✅ Simulação: Créditos adicionados via webhook fictício');
+        }, 2500);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao processar pagamento:', error);
+      alert('Erro ao processar pagamento. Tente novamente.');
+      setShowCheckoutModal(false);
+      setPaymentStep('method');
+    }
   };
 
   const copyPix = () => {
