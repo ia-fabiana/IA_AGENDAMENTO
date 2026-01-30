@@ -44,8 +44,8 @@ steps:
       - '--region'
       - 'us-central1'
       - '--allow-unauthenticated'
-      - '--set-env-vars'
-      - 'VITE_SUPABASE_URL=${_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},VITE_EVOLUTION_API_URL=${_EVOLUTION_API_URL},VITE_EVOLUTION_API_KEY=${_EVOLUTION_API_KEY}'
+      - '--port'
+      - '8080'
 
 # Images to be pushed to Container Registry
 images:
