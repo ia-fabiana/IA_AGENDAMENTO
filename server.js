@@ -422,6 +422,82 @@ app.post('/api/calendar/disconnect', async (req, res) => {
   }
 });
 
+// Admin Dashboard - Métricas globais
+app.get('/api/admin/metrics', async (req, res) => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL || 'https://ztfnnzclwvycpbapbbhb.supabase.co',
+      process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+    );
+
+    // Buscar total de tenants
+    const { data: tenants, error: tenantsError } = await supabase
+      .from('tenants')
+      .select('*');
+    
+    if (tenantsError) {
+      console.error('Erro ao buscar tenants:', tenantsError);
+      throw tenantsError;
+    }
+
+    // Calcular métricas
+    const totalTenants = tenants?.length || 0;
+    
+    // Calcular receita total (soma dos créditos adquiridos)
+    const totalRevenue = tenants?.reduce((sum, t) => {
+      // Assumindo que cada plano tem um valor (ajustar conforme necessário)
+      const planValues = { 'Bronze': 29.90, 'Prata': 79.90, 'Ouro': 149.90, 'Trial': 0 };
+      return sum + (planValues[t.plano] || 0);
+    }, 0) || 0;
+
+    // Calcular tokens consumidos (soma de todos os saldos)
+    const totalTokensConsumed = tenants?.reduce((sum, t) => sum + (t.consumo_tokens || 0), 0) || 0;
+
+    // Transformar tenants para o formato esperado pelo frontend
+    const tenantsInfo = tenants?.map(t => ({
+      id: t.id,
+      name: t.nome_negocio || 'Sem nome',
+      owner: t.nome_responsavel || 'Não informado',
+      plan: t.plano || 'Trial',
+      status: t.saldo_creditos > 0 ? 'active' : 'suspended',
+      consumption: t.consumo_tokens || 0,
+      lastActive: t.updated_at ? formatLastActive(new Date(t.updated_at)) : 'Nunca',
+      credits: t.saldo_creditos || 0
+    })) || [];
+
+    res.json({
+      globalMetrics: {
+        totalTenants,
+        totalRevenue,
+        totalTokensConsumed,
+        serverStatus: 'healthy'
+      },
+      tenants: tenantsInfo
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar métricas admin:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch admin metrics', 
+      details: error.message 
+    });
+  }
+});
+
+// Função auxiliar para formatar "último acesso"
+function formatLastActive(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Agora';
+  if (diffMins < 60) return `${diffMins} min atrás`;
+  if (diffHours < 24) return `${diffHours} hora${diffHours > 1 ? 's' : ''} atrás`;
+  return `${diffDays} dia${diffDays > 1 ? 's' : ''} atrás`;
+}
+
 // Webhook para receber mensagens do WhatsApp (Evolution API)
 app.post('/api/evolution/webhook', async (req, res) => {
   try {

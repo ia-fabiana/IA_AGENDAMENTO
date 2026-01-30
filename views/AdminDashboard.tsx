@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   DollarSign, 
@@ -18,24 +18,73 @@ import {
 import { GlobalAdminMetrics, TenantInfo } from '../types';
 
 const AdminDashboard: React.FC = () => {
-  // Simulação de dados globais (O que você veria como dono do SaaS)
-  const [globalMetrics] = useState<GlobalAdminMetrics>({
-    totalTenants: 128,
-    totalRevenue: 32450.00,
-    totalTokensConsumed: 12450000,
-    serverStatus: 'healthy'
+  const [globalMetrics, setGlobalMetrics] = useState<GlobalAdminMetrics>({
+    totalTenants: 0,
+    totalRevenue: 0,
+    totalTokensConsumed: 0,
+    serverStatus: 'loading'
   });
 
-  const [tenants] = useState<TenantInfo[]>([
-    { id: '1', name: 'Estúdio Shine', owner: 'Maria Silva', plan: 'Prata', status: 'active', consumption: 850, lastActive: '2 min atrás' },
-    { id: '2', name: 'Barbearia do Jota', owner: 'João Pedro', plan: 'Ouro', status: 'active', consumption: 2100, lastActive: '15 min atrás' },
-    { id: '3', name: 'Clínica Sorriso', owner: 'Ana Paula', plan: 'Bronze', status: 'suspended', consumption: 120, lastActive: '3 dias atrás' },
-    { id: '4', name: 'Pet Shop AuAu', owner: 'Carlos Luz', plan: 'Trial', status: 'active', consumption: 45, lastActive: 'Agora' },
-    { id: '5', name: 'Spa Relax', owner: 'Roberta Lima', plan: 'Ouro', status: 'active', consumption: 1800, lastActive: '1 hora atrás' },
-  ]);
+  const [tenants, setTenants] = useState<TenantInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Buscar dados reais da API
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/admin/metrics');
+        
+        if (!response.ok) {
+          throw new Error('Falha ao carregar métricas');
+        }
+
+        const data = await response.json();
+        setGlobalMetrics(data.globalMetrics);
+        setTenants(data.tenants);
+        setError(null);
+      } catch (err) {
+        console.error('Erro ao buscar dados admin:', err);
+        setError(err.message);
+        // Manter dados vazios em caso de erro
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdminData();
+    
+    // Atualizar a cada 30 segundos
+    const interval = setInterval(fetchAdminData, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading && tenants.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-brand-purple" />
+          <p className="text-slate-600">Carregando métricas administrativas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
+      
+      {/* Mensagem de erro se houver */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <div>
+            <p className="font-bold text-red-900">Erro ao carregar dados</p>
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        </div>
+      )}
       
       {/* Top Bar Admin */}
       <div className="flex items-center justify-between bg-brand-dark p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
