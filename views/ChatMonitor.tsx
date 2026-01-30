@@ -64,9 +64,9 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({
             
             // Validate required fields
             if (!cliente_nome || !data_hora) {
-              addLog(`ERROR: Missing required fields - cliente_nome: ${cliente_nome}, data_hora: ${data_hora}`);
+              addLog(`Error: Missing required fields - cliente_nome: ${cliente_nome}, data_hora: ${data_hora}`);
               functionResponse = "erro_dados_incompletos";
-              break;
+              continue;
             }
             
             const service = services.find(s => s.id === servico_id) || services[0];
@@ -74,11 +74,11 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({
             const newApt: Appointment = {
               id: crypto.randomUUID(),
               tenantId: config.id,
-              customerName: String(cliente_nome),
+              customerName: cliente_nome as string,
               phoneNumber: '5511999999999',
               serviceId: service.id,
               serviceName: service.name,
-              date: String(data_hora),
+              date: data_hora as string,
               status: 'confirmed',
               value: service.price
             };
