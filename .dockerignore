@@ -1,0 +1,49 @@
+# Node modules and build artifacts
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Development files
+.git
+.gitignore
+*.md
+README.md
+
+# IDE files
+.vscode
+.idea
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test files
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# CI/CD files
+.github
+cloudbuild.yaml
+
+# Source files (only dist is needed)
+src
+public
+components
+views
+services
+*.tsx
+*.ts
+tsconfig.json
+vite.config.ts
+index.tsx
+App.tsx
+types.ts
+
+# Database files
+*.sql
