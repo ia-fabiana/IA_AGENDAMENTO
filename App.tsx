@@ -91,13 +91,28 @@ const App: React.FC = () => {
     if (dbConnected === 'offline') {
       return (
         <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-10">
-          <div className="bg-white p-12 rounded-[4rem] border border-slate-200 shadow-2xl text-center max-w-md space-y-8 animate-in zoom-in">
+          <div className="bg-white p-12 rounded-[4rem] border border-slate-200 shadow-2xl text-center max-w-lg space-y-8 animate-in zoom-in">
              <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
                 <AlertCircle className="w-12 h-12" />
              </div>
              <div>
                 <h3 className="text-2xl font-black text-brand-dark uppercase tracking-tighter">Banco de Dados Offline</h3>
-                <p className="text-sm text-slate-400 mt-2">Não foi possível estabelecer conexão com o cluster de dados Supabase. Verifique suas chaves de API.</p>
+                <p className="text-sm text-slate-600 mt-2">Não foi possível estabelecer conexão com o cluster de dados Supabase.</p>
+                <div className="mt-4 text-left bg-slate-50 p-4 rounded-xl text-xs text-slate-600 space-y-2">
+                  <p className="font-bold text-brand-dark">Como resolver:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li>Crie um arquivo <code className="bg-white px-1 py-0.5 rounded">.env</code> na raiz do projeto</li>
+                    <li>Copie o conteúdo de <code className="bg-white px-1 py-0.5 rounded">.env.example</code></li>
+                    <li>Configure suas credenciais do Supabase:
+                      <ul className="list-disc list-inside ml-4 mt-1 text-[10px]">
+                        <li>VITE_SUPABASE_URL</li>
+                        <li>VITE_SUPABASE_ANON_KEY</li>
+                      </ul>
+                    </li>
+                    <li>Reinicie a aplicação</li>
+                  </ol>
+                  <p className="text-[10px] text-slate-500 mt-2">Consulte o arquivo <code className="bg-white px-1 py-0.5 rounded">QUICKSTART.md</code> para mais detalhes</p>
+                </div>
              </div>
              <button onClick={() => window.location.reload()} className="w-full bg-brand-dark text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs">
                 Tentar Reconectar
