@@ -5,8 +5,8 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Check if credentials are properly configured (not placeholder values)
-const isValidUrl = supabaseUrl && supabaseUrl.startsWith('https://') && !supabaseUrl.includes('your-project');
-const isValidKey = supabaseAnonKey && supabaseAnonKey.length > 20 && !supabaseAnonKey.includes('your-');
+const isValidUrl = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseUrl !== 'https://your-project.supabase.co';
+const isValidKey = supabaseAnonKey && supabaseAnonKey.length > 100 && supabaseAnonKey !== 'your-supabase-anon-key';
 
 if (!isValidUrl || !isValidKey) {
   console.error('⚠️  Supabase credentials not configured!');
