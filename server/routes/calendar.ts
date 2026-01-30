@@ -1,9 +1,19 @@
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { getAuthUrl, getTokensFromCode, checkAvailability } from '../googleCalendar';
 import { logger } from '../logger';
 import { supabase } from '../../services/supabase';
 
 const router = express.Router();
+
+// Rate limiter for OAuth endpoints
+const oauthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per windowMs
+  message: 'Too many OAuth requests from this IP, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Get Google OAuth authorization URL
 router.get('/auth-url', (req, res) => {
@@ -17,12 +27,35 @@ router.get('/auth-url', (req, res) => {
 });
 
 // Handle OAuth callback and save tokens
-router.post('/oauth-callback', async (req, res) => {
+router.post('/oauth-callback', oauthLimiter, async (req, res) => {
   try {
     const { code, tenantId } = req.body;
 
+    // Validate required fields
     if (!code || !tenantId) {
       return res.status(400).json({ error: 'Missing code or tenantId' });
+    }
+
+    // Validate code format (Google auth codes are typically 70-100 characters)
+    if (typeof code !== 'string' || code.length < 20 || code.length > 200) {
+      return res.status(400).json({ error: 'Invalid authorization code format' });
+    }
+
+    // Validate tenantId is a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(tenantId)) {
+      return res.status(400).json({ error: 'Invalid tenantId format' });
+    }
+
+    // Verify tenant exists
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('id', tenantId)
+      .single();
+
+    if (tenantError || !tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
     }
 
     // Exchange code for encrypted tokens

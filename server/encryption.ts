@@ -10,11 +10,18 @@ const KEY_LENGTH = 32;
 // Get encryption key from environment or generate a default one (in production, use env var)
 const getEncryptionKey = (): string => {
   const key = process.env.ENCRYPTION_KEY;
+  
+  // In production, fail fast if encryption key is not set
+  if (!key && process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_KEY must be set in production environment');
+  }
+  
   if (!key) {
     console.warn('WARNING: ENCRYPTION_KEY not set in environment variables. Using default key (NOT SECURE for production)');
     // Default key for development - MUST be replaced in production
     return 'default-encryption-key-must-be-changed-in-production-environment';
   }
+  
   return key;
 };
 

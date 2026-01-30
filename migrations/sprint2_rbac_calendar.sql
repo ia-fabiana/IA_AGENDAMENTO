@@ -1,5 +1,7 @@
 -- Migration: Add RBAC and Google Calendar support
 -- Sprint 2 enhancements
+-- NOTE: This migration uses PostgreSQL-specific functions (gen_random_uuid, pgcrypto extension)
+-- Requires PostgreSQL 9.4+ or Supabase
 
 -- ============================================
 -- 1. RBAC: Users, Roles and Permissions

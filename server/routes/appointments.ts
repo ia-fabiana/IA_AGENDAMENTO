@@ -11,12 +11,15 @@ router.post('/', async (req, res) => {
   try {
     const { appointment, userId, tenantId } = req.body;
 
+    // Require authentication
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     // Check permissions
-    if (userId) {
-      const hasPermission = await canAccess(userId, 'appointments', 'create');
-      if (!hasPermission) {
-        return res.status(403).json({ error: 'Permission denied' });
-      }
+    const hasPermission = await canAccess(userId, 'appointments', 'create');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Permission denied' });
     }
 
     let googleCalendarEventId: string | null = null;
@@ -82,14 +85,16 @@ router.post('/', async (req, res) => {
     if (error) throw error;
 
     // Log activity
-    await logActivity(
-      tenantId,
-      userId,
-      'appointment.created',
-      'appointment',
-      appointment.id,
-      { customerName: appointment.customerName, serviceName: appointment.serviceName }
-    );
+    if (userId) {
+      await logActivity(
+        tenantId,
+        userId,
+        'appointment.created',
+        'appointment',
+        appointment.id,
+        { customerName: appointment.customerName, serviceName: appointment.serviceName }
+      );
+    }
 
     res.json({ 
       appointment: data,
@@ -107,12 +112,15 @@ router.get('/:tenantId', async (req, res) => {
     const { tenantId } = req.params;
     const { userId } = req.query;
 
+    // Require authentication
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     // Check permissions
-    if (userId) {
-      const hasPermission = await canAccess(userId as string, 'appointments', 'read');
-      if (!hasPermission) {
-        return res.status(403).json({ error: 'Permission denied' });
-      }
+    const hasPermission = await canAccess(userId as string, 'appointments', 'read');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Permission denied' });
     }
 
     const { data, error } = await supabase
@@ -136,12 +144,15 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     const { userId, tenantId } = req.query;
 
+    // Require authentication
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     // Check permissions
-    if (userId) {
-      const hasPermission = await canAccess(userId as string, 'appointments', 'delete');
-      if (!hasPermission) {
-        return res.status(403).json({ error: 'Permission denied' });
-      }
+    const hasPermission = await canAccess(userId as string, 'appointments', 'delete');
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Permission denied' });
     }
 
     // Get appointment
@@ -163,8 +174,23 @@ router.delete('/:id', async (req, res) => {
           appointment.google_calendar_event_id
         );
         logger.info({ appointmentId: id }, 'Deleted from Google Calendar');
-      } catch (error) {
-        logger.warn({ error, appointmentId: id }, 'Failed to delete from Google Calendar');
+      } catch (calendarError: any) {
+        logger.error({ error: calendarError, appointmentId: id }, 'Failed to delete from Google Calendar');
+        // Mark the appointment for reconciliation instead of failing the entire operation
+        await supabase
+          .from('agendamentos')
+          .update({
+            google_calendar_sync_error: `Failed to delete: ${calendarError.message}`,
+            google_calendar_synced: false
+          })
+          .eq('id', id);
+        
+        // Return error but don't fail the deletion
+        return res.status(207).json({ 
+          success: true, 
+          warning: 'Appointment deleted but Google Calendar sync failed',
+          error: calendarError.message 
+        });
       }
     }
 
@@ -177,13 +203,15 @@ router.delete('/:id', async (req, res) => {
     if (error) throw error;
 
     // Log activity
-    await logActivity(
-      tenantId as string,
-      userId as string,
-      'appointment.deleted',
-      'appointment',
-      id
-    );
+    if (userId) {
+      await logActivity(
+        tenantId as string,
+        userId as string,
+        'appointment.deleted',
+        'appointment',
+        id
+      );
+    }
 
     res.json({ success: true });
   } catch (error: any) {
