@@ -113,5 +113,74 @@ export const evolutionService = {
     } catch {
       return false;
     }
+  },
+
+  // Envia mensagem de texto via WhatsApp
+  sendMessage: async (instanceName: string, to: string, message: string): Promise<boolean> => {
+    try {
+      // Normaliza o número (remove caracteres não numéricos)
+      const normalizedNumber = to.replace(/\D/g, '');
+      const remoteJid = normalizedNumber.includes('@') ? normalizedNumber : `${normalizedNumber}@s.whatsapp.net`;
+
+      const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instanceName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY
+        },
+        body: JSON.stringify({
+          number: remoteJid,
+          text: message,
+          delay: 1200
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Erro ao enviar mensagem:', error);
+        return false;
+      }
+
+      console.log('✅ Mensagem enviada com sucesso para:', to);
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao enviar mensagem WhatsApp:', error);
+      return false;
+    }
+  },
+
+  // Configura o webhook para receber mensagens
+  setWebhook: async (instanceName: string, webhookUrl: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${EVOLUTION_API_URL}/webhook/set/${instanceName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY
+        },
+        body: JSON.stringify({
+          url: webhookUrl,
+          webhook_by_events: false,
+          webhook_base64: false,
+          events: [
+            'MESSAGES_UPSERT',
+            'MESSAGES_UPDATE',
+            'CONNECTION_UPDATE'
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ Erro ao configurar webhook:', error);
+        return false;
+      }
+
+      console.log('✅ Webhook configurado com sucesso:', webhookUrl);
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao configurar webhook:', error);
+      return false;
+    }
   }
 };

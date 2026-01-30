@@ -422,6 +422,51 @@ app.post('/api/calendar/disconnect', async (req, res) => {
   }
 });
 
+// Webhook para receber mensagens do WhatsApp (Evolution API)
+app.post('/api/evolution/webhook', async (req, res) => {
+  try {
+    console.log('📱 Webhook recebido:', JSON.stringify(req.body, null, 2));
+    
+    const { event, instance, data } = req.body;
+    
+    // Responder imediatamente para o Evolution API
+    res.status(200).json({ received: true });
+    
+    // Processar apenas mensagens recebidas (não enviadas por nós)
+    if (event === 'messages.upsert' && data?.key?.fromMe === false) {
+      const messageData = data;
+      const remoteJid = messageData.key?.remoteJid;
+      const messageText = messageData.message?.conversation || 
+                         messageData.message?.extendedTextMessage?.text || '';
+      
+      if (!messageText || !remoteJid) {
+        console.log('⚠️ Mensagem sem texto ou remetente');
+        return;
+      }
+      
+      console.log(`💬 Mensagem de ${remoteJid}: ${messageText}`);
+      
+      // TODO: Buscar tenantId baseado na instância
+      // Por enquanto, usar um tenant padrão para testes
+      const tenantId = 'test-tenant-id';
+      
+      // TODO: Integrar com aiService para processar a mensagem
+      // Por enquanto, responder com mensagem simples
+      const { evolutionService } = await import('./services/evolutionService.ts');
+      
+      const responseMessage = `Olá! Recebi sua mensagem: "${messageText}". Em breve nossa IA irá processar automaticamente. 🤖`;
+      
+      // Enviar resposta
+      await evolutionService.sendMessage(instance, remoteJid, responseMessage);
+      
+      console.log('✅ Resposta enviada');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao processar webhook:', error);
+    // Não retornar erro para não quebrar o webhook
+  }
+});
+
 // Proxy para Evolution API
 app.all('/api/evolution/*', async (req, res) => {
   try {
