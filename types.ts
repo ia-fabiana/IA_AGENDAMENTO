@@ -44,6 +44,9 @@ export interface Tenant {
   owner_id: string;
   status_assinatura: 'active' | 'suspended';
   saldo_creditos: number;
+  googleCalendarId?: string;
+  googleOAuthToken?: string;
+  googleCalendarSyncEnabled?: boolean;
 }
 
 export interface Instance {
@@ -72,6 +75,8 @@ export interface BusinessConfig {
   openingHours: string;
   cancellationPolicy: string;
   minAdvanceTime: number;
+  googleCalendarId?: string;
+  googleCalendarSyncEnabled?: boolean;
   promotion: {
     enabled: boolean;
     description: string;
@@ -90,6 +95,8 @@ export interface Appointment {
   date: string;
   status: 'confirmed' | 'cancelled' | 'pending';
   value: number;
+  googleCalendarEventId?: string;
+  googleCalendarSynced?: boolean;
 }
 
 export interface ChatMessage {
@@ -129,6 +136,33 @@ export interface GlobalAdminMetrics {
   serverStatus: 'healthy' | 'warning' | 'down';
   githubSync: GitHubSyncInfo;
 }
+
+// RBAC Types
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  tenantId: string;
+  roleId: string;
+  roleName: string;
+  isActive: boolean;
+  permissions: string[];
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface Permission {
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
+  description: string;
+}
+
 
 export interface DashboardMetrics {
   totalRevenue: number;
