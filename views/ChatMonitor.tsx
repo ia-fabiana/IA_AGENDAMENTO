@@ -66,11 +66,11 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({
             const newApt: Appointment = {
               id: crypto.randomUUID(),
               tenantId: config.id,
-              customerName: cliente_nome,
+              customerName: String(cliente_nome),
               phoneNumber: '5511999999999',
               serviceId: service.id,
               serviceName: service.name,
-              date: data_hora,
+              date: String(data_hora),
               status: 'confirmed',
               value: service.price
             };
