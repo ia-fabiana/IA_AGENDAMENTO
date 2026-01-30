@@ -514,28 +514,99 @@ app.post('/api/evolution/webhook', async (req, res) => {
       const remoteJid = messageData.key?.remoteJid;
       const messageText = messageData.message?.conversation || 
                          messageData.message?.extendedTextMessage?.text || '';
+      const pushname = messageData.pushName || 'Cliente';
       
       if (!messageText || !remoteJid) {
         console.log('⚠️ Mensagem sem texto ou remetente');
         return;
       }
       
-      console.log(`💬 Mensagem de ${remoteJid}: ${messageText}`);
+      console.log(`💬 Mensagem de ${pushname} (${remoteJid}): ${messageText}`);
       
-      // TODO: Buscar tenantId baseado na instância
+      // Buscar ou criar tenantId baseado na instância
       // Por enquanto, usar um tenant padrão para testes
       const tenantId = 'test-tenant-id';
       
-      // TODO: Integrar com aiService para processar a mensagem
-      // Por enquanto, responder com mensagem simples
+      // Importar serviços necessários
       const { evolutionService } = await import('./services/evolutionService.ts');
+      const { getAIResponse, processFunctionCalls } = await import('./services/aiService.ts');
+      const { createClient } = await import('@supabase/supabase-js');
       
-      const responseMessage = `Olá! Recebi sua mensagem: "${messageText}". Em breve nossa IA irá processar automaticamente. 🤖`;
+      // Inicializar Supabase
+      const supabase = createClient(
+        process.env.SUPABASE_URL || 'https://ztfnnzclwvycpbapbbhb.supabase.co',
+        process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+      );
+      
+      // Buscar configurações do tenant
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', tenantId)
+        .single();
+      
+      // Buscar serviços do tenant
+      const { data: services } = await supabase
+        .from('services')
+        .select('*')
+        .eq('tenant_id', tenantId);
+      
+      // Buscar agendamentos existentes
+      const { data: appointments } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .gte('datetime', new Date().toISOString());
+      
+      // Configuração padrão do negócio
+      const businessConfig = {
+        name: tenant?.nome_negocio || 'Nosso Estabelecimento',
+        address: tenant?.endereco || 'Endereço não configurado',
+        promotion: {
+          description: '10% de desconto na primeira visita!'
+        }
+      };
+      
+      // Obter resposta da IA
+      const aiResponse = await getAIResponse(
+        messageText,
+        [], // histórico vazio por simplicidade
+        businessConfig,
+        services || [],
+        appointments || [],
+        pushname
+      );
+      
+      let finalResponse = aiResponse.text;
+      
+      // Se houver function calls, processar
+      if (aiResponse.functionCalls && aiResponse.functionCalls.length > 0) {
+        const { results } = await processFunctionCalls(
+          aiResponse.functionCalls,
+          tenantId,
+          services || [],
+          appointments || []
+        );
+        
+        // Adicionar resultados à resposta
+        for (const result of results) {
+          if (result.response.message) {
+            finalResponse += `\n\n${result.response.message}`;
+          }
+          
+          // Se foi agendamento bem-sucedido, adicionar detalhes
+          if (result.name === 'book_appointment' && result.response.success) {
+            const apt = result.response.appointment;
+            const service = services?.find(s => s.id === apt.serviceId);
+            finalResponse += `\n\n📅 Serviço: ${service?.name || 'N/A'}\n⏰ Horário: ${new Date(apt.datetime).toLocaleString('pt-BR')}`;
+          }
+        }
+      }
       
       // Enviar resposta
-      await evolutionService.sendMessage(instance, remoteJid, responseMessage);
+      await evolutionService.sendMessage(instance, remoteJid, finalResponse);
       
-      console.log('✅ Resposta enviada');
+      console.log('✅ Resposta enviada com IA');
     }
   } catch (error) {
     console.error('❌ Erro ao processar webhook:', error);

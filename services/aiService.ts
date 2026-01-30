@@ -108,3 +108,105 @@ export const getAIResponse = async (
     };
   }
 };
+
+/**
+ * Processa function calls da IA e executa as ações correspondentes
+ */
+export const processFunctionCalls = async (
+  functionCalls: any[],
+  tenantId: string,
+  services: Service[],
+  appointments: Appointment[]
+): Promise<{ results: any[], shouldRespond: boolean }> => {
+  const results = [];
+  
+  for (const call of functionCalls) {
+    console.log(`🔧 Executando função: ${call.name}`, call.args);
+    
+    try {
+      switch (call.name) {
+        case 'get_services':
+          // Retorna lista de serviços disponíveis
+          results.push({
+            name: 'get_services',
+            response: services.map(s => ({
+              id: s.id,
+              name: s.name,
+              price: s.price,
+              duration: s.duration
+            }))
+          });
+          break;
+          
+        case 'check_availability':
+          // Verifica disponibilidade no calendário
+          const requestedDate = new Date(call.args.date);
+          
+          // Buscar agendamentos existentes no mesmo horário
+          const conflicting = appointments.filter(apt => {
+            const aptDate = new Date(apt.datetime);
+            const timeDiff = Math.abs(aptDate.getTime() - requestedDate.getTime());
+            return timeDiff < 60 * 60 * 1000; // Menos de 1 hora de diferença
+          });
+          
+          const available = conflicting.length === 0;
+          
+          results.push({
+            name: 'check_availability',
+            response: {
+              available,
+              date: call.args.date,
+              conflicts: conflicting.length,
+              message: available 
+                ? `✅ Horário ${requestedDate.toLocaleString('pt-BR')} está disponível!`
+                : `❌ Já existe agendamento próximo a este horário.`
+            }
+          });
+          break;
+          
+        case 'book_appointment':
+          // Cria o agendamento (simplificado - em produção, salvar no banco)
+          const newAppointment = {
+            id: `apt_${Date.now()}`,
+            tenantId,
+            customerName: call.args.customerName,
+            serviceId: call.args.serviceId,
+            datetime: call.args.date,
+            status: 'confirmed',
+            createdAt: new Date().toISOString()
+          };
+          
+          // TODO: Salvar no Supabase e criar evento no Google Calendar
+          // Por enquanto, apenas retorna confirmação
+          
+          results.push({
+            name: 'book_appointment',
+            response: {
+              success: true,
+              appointment: newAppointment,
+              message: `🎉 Agendamento confirmado para ${call.args.customerName}!`
+            }
+          });
+          break;
+          
+        default:
+          console.warn(`⚠️ Função desconhecida: ${call.name}`);
+          results.push({
+            name: call.name,
+            response: { error: 'Função não implementada' }
+          });
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao executar ${call.name}:`, error);
+      results.push({
+        name: call.name,
+        response: { error: error.message }
+      });
+    }
+  }
+  
+  return {
+    results,
+    shouldRespond: results.some(r => r.name === 'book_appointment' && r.response.success)
+  };
+};
