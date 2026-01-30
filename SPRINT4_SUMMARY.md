@@ -336,7 +336,7 @@ package.json                - Adicionar prom-client
 ```json
 {
   "dependencies": {
-    "prom-client": "latest"  // Prometheus metrics client
+    "prom-client": "^15.1.3"  // Prometheus metrics client
   }
 }
 ```

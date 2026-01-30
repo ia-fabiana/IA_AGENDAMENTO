@@ -98,7 +98,7 @@ export async function getMetrics(): Promise<string> {
     return await register.metrics();
   } catch (error) {
     logger.error({ error }, 'Failed to get metrics');
-    return '';
+    throw error;
   }
 }
 
@@ -110,7 +110,7 @@ export async function getMetricsJSON() {
     return await register.getMetricsAsJSON();
   } catch (error) {
     logger.error({ error }, 'Failed to get metrics JSON');
-    return [];
+    throw error;
   }
 }
 

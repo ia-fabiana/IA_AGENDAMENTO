@@ -7,7 +7,7 @@ import { authLimiter } from '../rateLimit';
 const router = express.Router();
 
 // Get Google OAuth authorization URL
-router.get('/auth-url', (req, res) => {
+router.get('/auth-url', authLimiter, (req, res) => {
   try {
     const authUrl = getAuthUrl();
     res.json({ authUrl });

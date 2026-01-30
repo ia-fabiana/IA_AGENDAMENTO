@@ -21,6 +21,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
 
+// Trust proxy for rate limiting behind load balancers/proxies (Cloud Run, etc.)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -28,20 +31,22 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Apply rate limiting
-app.use(globalLimiter);
-app.use(writeLimiter);
-
-// Metrics middleware - track active connections
+// Metrics middleware - track active connections (before all routes)
 app.use((req, res, next) => {
   activeConnections.inc();
-  res.on('finish', () => {
+  
+  const decrementConnection = () => {
     activeConnections.dec();
-  });
+  };
+  
+  // Decrement on both finish and close to handle unexpected closures
+  res.on('finish', decrementConnection);
+  res.on('close', decrementConnection);
+  
   next();
 });
 
-// Request logging and metrics middleware
+// Request logging and metrics middleware (before all routes)
 app.use((req, res, next) => {
   const startTime = Date.now();
 
@@ -65,7 +70,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health checks
+// Health checks (excluded from rate limiting - before rate limiters)
 app.get('/health', async (req, res) => {
   const health = await performHealthCheck();
   const statusCode = health.status === 'healthy' ? 200 : 
@@ -83,7 +88,7 @@ app.get('/health/live', (req, res) => {
   res.status(alive ? 200 : 503).json({ alive });
 });
 
-// Metrics endpoint
+// Metrics endpoint (excluded from rate limiting - before rate limiters)
 app.get('/metrics', async (req, res) => {
   try {
     res.set('Content-Type', 'text/plain');
@@ -94,7 +99,7 @@ app.get('/metrics', async (req, res) => {
   }
 });
 
-// Metrics JSON endpoint (for debugging)
+// Metrics JSON endpoint (for debugging - before rate limiters)
 app.get('/metrics/json', async (req, res) => {
   try {
     const metrics = await getMetricsJSON();
@@ -103,6 +108,10 @@ app.get('/metrics/json', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Apply rate limiting after health/metrics endpoints
+app.use(globalLimiter);
+app.use(writeLimiter);
 
 // API Routes
 app.use('/api/appointments', appointmentsRouter);

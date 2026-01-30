@@ -1,6 +1,12 @@
 /**
  * Feature flags system for controlled rollout
  * Sprint 4 - Production: Feature flags for testing with real clients
+ * 
+ * NOTE: This implementation uses in-memory storage which is reset on server restart.
+ * For production use, consider:
+ * - Storing overrides in database (Supabase)
+ * - Using environment variables for defaults
+ * - External feature flag service (LaunchDarkly, etc.)
  */
 
 export interface FeatureFlags {

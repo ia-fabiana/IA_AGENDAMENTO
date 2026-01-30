@@ -13,14 +13,14 @@ describe('Rate Limiting', () => {
 
   describe('Global Rate Limiter', () => {
     it('should allow requests within limit', async () => {
-      const response = await supertest(app).get('/health');
-      // Health check might return 503 in test environment due to database
-      expect([200, 503]).toContain(response.status);
+      // Use API endpoint instead of health (health is excluded from rate limiting)
+      const response = await supertest(app).get('/api/auth/roles');
+      expect([200, 401]).toContain(response.status);
       expect(response.headers['ratelimit-limit']).toBeDefined();
     });
 
     it('should return rate limit headers', async () => {
-      const response = await supertest(app).get('/health');
+      const response = await supertest(app).get('/api/auth/roles');
       expect(response.headers['ratelimit-limit']).toBeDefined();
       expect(response.headers['ratelimit-remaining']).toBeDefined();
       expect(response.headers['ratelimit-reset']).toBeDefined();
@@ -29,7 +29,7 @@ describe('Rate Limiting', () => {
     it('should block requests after limit exceeded', async () => {
       // Note: In real tests, we would need to make 100+ requests
       // This is a simplified test to verify the limiter is installed
-      const response = await supertest(app).get('/health');
+      const response = await supertest(app).get('/api/auth/roles');
       expect(response.headers['ratelimit-limit']).toBe('100');
     });
   });

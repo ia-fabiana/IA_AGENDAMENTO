@@ -4,6 +4,9 @@ import { logger } from './logger';
 /**
  * Rate limiting configuration for different endpoint types
  * Sprint 4 - Production: Comprehensive rate limiting
+ * 
+ * NOTE: In production behind proxies/load balancers, configure Express trust proxy:
+ * app.set('trust proxy', 1) or app.set('trust proxy', 'loopback')
  */
 
 // Global rate limiter - applies to all requests
