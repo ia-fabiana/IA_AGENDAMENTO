@@ -61,6 +61,14 @@ const ChatMonitor: React.FC<ChatMonitorProps> = ({
           }
           else if (fc.name === 'confirmar_agendamento') {
             const { cliente_nome, servico_id, data_hora } = fc.args;
+            
+            // Validate required fields
+            if (!cliente_nome || !data_hora) {
+              addLog(`ERROR: Missing required fields - cliente_nome: ${cliente_nome}, data_hora: ${data_hora}`);
+              functionResponse = "erro_dados_incompletos";
+              break;
+            }
+            
             const service = services.find(s => s.id === servico_id) || services[0];
             
             const newApt: Appointment = {

@@ -71,6 +71,17 @@ const ChatSimulation: React.FC<ChatSimulationProps> = ({
 
           if (fc.name === 'book_appointment') {
             const { serviceId, date } = fc.args;
+            
+            // Validate required fields
+            if (!date) {
+              setMessages(prev => [...prev, { 
+                role: 'model', 
+                text: 'Desculpe, não consegui processar a data do agendamento. Por favor, tente novamente.', 
+                timestamp: new Date() 
+              }]);
+              break;
+            }
+            
             const service = services.find(s => s.id === serviceId) || services[0];
             const newApt: Appointment = {
               id: `apt_${Date.now()}`,
