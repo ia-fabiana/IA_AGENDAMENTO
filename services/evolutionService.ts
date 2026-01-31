@@ -6,8 +6,8 @@ import { Instance } from '../types';
  * Configurado para o domínio seguro https://api.iafabiana.com.br
  */
 
-export const evolutionApiUrl = process.env.VITE_EVOLUTION_API_URL || 'https://api.iafabiana.com.br';
-export const evolutionApiKey = process.env.VITE_EVOLUTION_API_KEY || ''; 
+export const EVOLUTION_API_URL = 'https://api.iafabiana.com.br';
+export const EVOLUTION_API_KEY = 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'; 
 
 export const evolutionService = {
   formatInstanceName: (businessName: string) => {
@@ -19,12 +19,11 @@ export const evolutionService = {
     const instanceName = evolutionService.formatInstanceName(businessName);
     
     try {
-      if (!evolutionApiKey) throw new Error('MISSING_EVOLUTION_API_KEY');
-      const response = await fetch(`${evolutionApiUrl}/instance/create`, {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': evolutionApiKey
+          'apikey': EVOLUTION_API_KEY
         },
         body: JSON.stringify({
           instanceName: instanceName,
@@ -61,10 +60,9 @@ export const evolutionService = {
 
   getQRCode: async (instanceName: string): Promise<string> => {
     try {
-      if (!evolutionApiKey) throw new Error('MISSING_EVOLUTION_API_KEY');
-      const response = await fetch(`${evolutionApiUrl}/instance/connect/${instanceName}`, {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
         method: 'GET',
-        headers: { 'apikey': evolutionApiKey }
+        headers: { 'apikey': EVOLUTION_API_KEY }
       });
 
       if (!response.ok) throw new Error("RETRY");
@@ -86,10 +84,9 @@ export const evolutionService = {
 
   validateHandshake: async (instanceName: string): Promise<{connected: boolean, number?: string}> => {
     try {
-      if (!evolutionApiKey) throw new Error('MISSING_EVOLUTION_API_KEY');
-      const response = await fetch(`${evolutionApiUrl}/instance/connectionState/${instanceName}`, {
+      const response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${instanceName}`, {
         method: 'GET',
-        headers: { 'apikey': evolutionApiKey }
+        headers: { 'apikey': EVOLUTION_API_KEY }
       });
       const data = await response.json();
       const state = data.instance?.state || data.state || data.status;
@@ -104,10 +101,9 @@ export const evolutionService = {
 
   logoutInstance: async (instanceName: string): Promise<boolean> => {
     try {
-      if (!evolutionApiKey) throw new Error('MISSING_EVOLUTION_API_KEY');
-      await fetch(`${evolutionApiUrl}/instance/logout/${instanceName}`, {
+      await fetch(`${EVOLUTION_API_URL}/instance/logout/${instanceName}`, {
         method: 'DELETE',
-        headers: { 'apikey': evolutionApiKey }
+        headers: { 'apikey': EVOLUTION_API_KEY }
       });
       return true;
     } catch {

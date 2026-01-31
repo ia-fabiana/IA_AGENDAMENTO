@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Loader2, Database, AlertCircle } from 'lucide-react';
-import Layout from './components/Layout';
-import Dashboard from './views/Dashboard';
-import Agents from './views/Agents';
-import Training from './views/Training';
-import ChatMonitor from './views/ChatMonitor';
-import Connections from './views/Connections';
-import Appointments from './views/Appointments';
-import PlanAndCredits from './views/PlanAndCredits';
-import AdminDashboard from './views/AdminDashboard';
-import { dbService } from './services/dbService';
-import { AppRoute, Service, BusinessConfig, Appointment, AIConfig, UserCredits } from './types';
+import Layout from './components/Layout.tsx';
+import Dashboard from './views/Dashboard.tsx';
+import Agents from './views/Agents.tsx';
+import Training from './views/Training.tsx';
+import ChatMonitor from './views/ChatMonitor.tsx';
+import Connections from './views/Connections.tsx';
+import Appointments from './views/Appointments.tsx';
+import PlanAndCredits from './views/PlanAndCredits.tsx';
+import AdminDashboard from './views/AdminDashboard.tsx';
+import { dbService } from './services/dbService.ts';
+import { AppRoute, Service, BusinessConfig, Appointment, AIConfig, UserCredits } from './types.ts';
 
 const App: React.FC = () => {
   const [activeRoute, setActiveRoute] = useState<AppRoute>(AppRoute.DASHBOARD);

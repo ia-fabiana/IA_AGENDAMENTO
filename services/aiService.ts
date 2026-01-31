@@ -1,17 +1,18 @@
 
 import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
-import { BusinessConfig, Service, Appointment, AIConfig } from "../types";
-
-/**
- * ENGINE DE IA PARA PRODUÇÃO SaaS
- * Utiliza Gemini 3 para alta precisão em agendamentos.
- */
+import { BusinessConfig, Service, Appointment, AIConfig } from "../types.ts";
 
 const bookingTools: FunctionDeclaration[] = [
   {
     name: "listar_servicos",
     description: "Retorna o catálogo atualizado de serviços, preços e tempos de duração.",
-    // Corrected: Removed parameters as Type.OBJECT cannot be empty per guidelines.
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        confirmar: { type: Type.BOOLEAN, description: "Confirmação para listar." }
+      },
+      required: ["confirmar"]
+    }
   },
   {
     name: "verificar_disponibilidade",
@@ -53,34 +54,19 @@ export const getAIResponse = async (
   }
 ) => {
   if (!aiConfig.botActive) return { 
-    text: "Sistema temporariamente offline para manutenção.", 
+    text: "Sistema temporariamente offline.", 
     showPromotion: false,
     functionCalls: undefined,
     usage: { totalTokens: 0 }
   };
 
-  // Always use process.env.API_KEY for initializing the GoogleGenAI client
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const systemInstruction = `
-    VOCÊ É UM AGENTE DE VENDAS REAL.
-    Nome: "${aiConfig.name}". Empresa: "${businessConfig.name}".
-    Endereço: ${businessConfig.address}.
-    
-    REGRAS DE NEGÓCIO:
-    - Sua missão é converter conversas em AGENDAMENTOS.
-    - Se o cliente perguntar valores, use a função 'listar_servicos'.
-    - Nunca confirme um horário sem antes usar 'verificar_disponibilidade'.
-    - Use 'confirmar_agendamento' apenas após o cliente dar o OK final.
-    
-    PROMOÇÃO ATIVA:
-    ${businessConfig.promotion.enabled ? `"${businessConfig.promotion.description}". Ofereça isso se o cliente estiver em dúvida.` : 'Nenhuma no momento.'}
-    
-    COMPORTAMENTO: ${aiConfig.behavior}
+    VOCÊ É UM AGENTE DE VENDAS. Nome: "${aiConfig.name}". Empresa: "${businessConfig.name}".
   `;
 
   try {
-    // Correctly call generateContent with the model from config or fallback to flash preview.
     const response = await ai.models.generateContent({
       model: aiConfig.model.includes('gemini') ? aiConfig.model : 'gemini-3-flash-preview',
       contents: [...history, { role: 'user', parts: [{ text: message }] }],
@@ -91,12 +77,10 @@ export const getAIResponse = async (
       },
     });
 
-    // Directly access the .text property as per guidelines.
-    const responseText = response.text || "Pode repetir? Tive uma oscilação na rede.";
+    const responseText = response.text || "Oscilação na rede.";
     
-    // Return text and metadata including usage statistics to fix the reported TypeScript error.
     return { 
-      text: responseText.replace('[SEND_PROMO_ART]', '').trim(), 
+      text: responseText.trim(), 
       showPromotion: responseText.includes('[SEND_PROMO_ART]'),
       functionCalls: response.functionCalls,
       usage: {
@@ -104,12 +88,7 @@ export const getAIResponse = async (
       }
     };
   } catch (error) {
-    console.error("Critical AI Engine Failure:", error);
-    return { 
-      text: "Tive um problema técnico. Por favor, tente novamente em alguns instantes.", 
-      showPromotion: false,
-      functionCalls: undefined,
-      usage: { totalTokens: 0 }
-    };
+    console.error("AI Error:", error);
+    return { text: "Erro técnico.", usage: { totalTokens: 0 } };
   }
 };

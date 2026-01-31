@@ -1,6 +1,6 @@
 
-import { supabase } from './supabase';
-import { BusinessConfig, Service, Appointment, AIConfig } from '../types';
+import { supabase } from './supabase.ts';
+import { BusinessConfig, Service, Appointment } from '../types.ts';
 
 export const dbService = {
   // Verificação de Saúde
