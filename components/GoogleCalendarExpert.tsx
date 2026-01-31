@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Calendar, 
   CheckCircle, 
@@ -83,10 +83,15 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
       helpText: 'Todos os agendamentos serão sincronizados automaticamente'
     }
   ]);
+  
+  // Use ref to track connection completion for timeout logic
+  const connectionCompletedRef = useRef(false);
 
   useEffect(() => {
     checkConnectionStatus();
-  }, [checkConnectionStatus]);
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
@@ -129,6 +134,7 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
   const handleConnect = async () => {
     setIsConnecting(true);
     setError(null);
+    connectionCompletedRef.current = false;
     
     try {
       // Step 1: Check credentials
@@ -161,6 +167,9 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
       const handleMessage = async (event: MessageEvent) => {
         if (event.data.type === 'GOOGLE_OAUTH_SUCCESS') {
           const { code } = event.data;
+          connectionCompletedRef.current = true;
+          clearTimeout(timeoutId);
+          
           updateStepStatus('authorize', 'completed');
           
           // Step 3: Save token
@@ -209,29 +218,18 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
 
       window.addEventListener('message', handleMessage);
       
-      // Timeout for popup - use closure to check popup state
+      // Timeout for popup - check ref to see if connection completed
       const timeoutId = setTimeout(() => {
-        // Check if popup is still open or connection not completed
-        if (popup && !popup.closed) {
-          popup.close();
-        }
-        window.removeEventListener('message', handleMessage);
-        // Only show error if still in connecting state
-        if (isConnecting) {
+        if (!connectionCompletedRef.current) {
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          window.removeEventListener('message', handleMessage);
           updateStepStatus('authorize', 'error');
           setError('Timeout: Autorização não completada');
           setIsConnecting(false);
         }
       }, OAUTH_TIMEOUT_MS);
-      
-      // Cleanup timeout if connection succeeds before timeout
-      const cleanup = () => {
-        clearTimeout(timeoutId);
-        window.removeEventListener('message', handleMessage);
-      };
-      
-      // Store cleanup reference for potential early completion
-      (handleMessage as any).cleanup = cleanup;
       
     } catch (err: any) {
       console.error('Connection failed:', err);
