@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, CalendarCheck, CheckCircle2, Clock, MapPin, Cpu, ShieldCheck, Zap, Volume2, AlertTriangle } from 'lucide-react';
-import { BusinessConfig, Service, Appointment, ChatMessage, AIConfig, UserCredits, AppRoute } from '../types';
-import { getAIResponse } from '../services/aiService';
+import { BusinessConfig, Service, Appointment, ChatMessage, AIConfig, UserCredits, AppRoute } from '../types.ts';
+import { getAIResponse } from '../services/aiService.ts';
 
 interface ChatSimulationProps {
   config: BusinessConfig;
@@ -12,7 +12,6 @@ interface ChatSimulationProps {
   credits: UserCredits;
   setCredits: (credits: UserCredits) => void;
   onNewAppointment?: (apt: Appointment) => void;
-  // Added onNavigate to props interface
   onNavigate: (route: AppRoute) => void;
 }
 
@@ -237,7 +236,6 @@ const ChatSimulation: React.FC<ChatSimulationProps> = ({
            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Saldo de Operação</p>
            <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
               <button 
-                // Updated to use the passed onNavigate prop
                 onClick={() => onNavigate(AppRoute.PLAN_AND_CREDITS)}
                 className="text-[10px] font-black uppercase tracking-widest text-brand-purple hover:text-white transition-all flex items-center gap-2"
               >

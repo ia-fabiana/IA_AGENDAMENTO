@@ -4,8 +4,8 @@ import {
   CreditCard, Zap, ShieldCheck, Gem, CheckCircle2, Loader2, Wallet, 
   ArrowRight, Landmark, Activity, ShoppingBag, X, QrCode, Smartphone, Copy, Check, Clock, Lock, Sparkles, AlertCircle
 } from 'lucide-react';
-import { UserCredits, AppRoute } from '../types';
-import { mercadopagoService } from '../services/mercadopagoService';
+import { UserCredits, AppRoute } from '../types.ts';
+import { mercadopagoService } from '../services/mercadopagoService.ts';
 
 interface PlanAndCreditsProps {
   credits: UserCredits;

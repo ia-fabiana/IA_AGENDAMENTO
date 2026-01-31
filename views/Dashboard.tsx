@@ -11,7 +11,7 @@ import {
   DollarSign,
   ArrowUpRight
 } from 'lucide-react';
-import { UserCredits, DashboardMetrics } from '../types';
+import { UserCredits, DashboardMetrics } from '../types.ts';
 
 interface DashboardProps {
   credits: UserCredits;
