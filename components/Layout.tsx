@@ -17,7 +17,8 @@ import {
   Globe,
   Key,
   Database,
-  Cloud
+  Cloud,
+  Sparkles
 } from 'lucide-react';
 import { AppRoute, AIProvider, UserCredits } from '../types';
 
@@ -50,6 +51,7 @@ const Layout: React.FC<LayoutProps> = ({
     { id: AppRoute.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
     { id: AppRoute.AGENTS, label: 'Agentes IA', icon: Cpu },
     { id: AppRoute.APPOINTMENTS, label: 'Agendamentos', icon: Calendar },
+    { id: AppRoute.CALENDAR_EXPERT, label: 'Especialista Calendar', icon: Sparkles },
     { id: AppRoute.TRAINING, label: 'Painel de Treino', icon: Settings },
     { id: AppRoute.CONNECTIONS, label: 'Conexões', icon: LinkIcon },
     { id: AppRoute.CHAT_MONITOR, label: 'Monitoramento', icon: Activity },
