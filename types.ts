@@ -116,7 +116,8 @@ export enum AppRoute {
   CHAT_MONITOR = 'chat_monitor',
   PLAN_AND_CREDITS = 'plan_and_credits',
   ADMIN = 'admin',
-  DOCS = 'docs'
+  DOCS = 'docs',
+  CALENDAR_EXPERT = 'calendar_expert'
 }
 
 export interface TenantInfo {

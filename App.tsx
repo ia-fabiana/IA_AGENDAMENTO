@@ -10,6 +10,7 @@ import Connections from './views/Connections';
 import Appointments from './views/Appointments';
 import PlanAndCredits from './views/PlanAndCredits';
 import AdminDashboard from './views/AdminDashboard';
+import { CalendarExpert } from './views/CalendarExpert';
 import { dbService } from './services/dbService';
 import { AppRoute, Service, BusinessConfig, Appointment, AIConfig, UserCredits } from './types';
 
@@ -143,6 +144,7 @@ const App: React.FC = () => {
         return <ChatMonitor config={config} aiConfig={aiConfig} credits={credits} isConnected={isWaConnected} onNavigate={setActiveRoute} services={services} appointments={appointments} onRefreshData={refreshData} />;
       case AppRoute.PLAN_AND_CREDITS: return <PlanAndCredits credits={credits} setCredits={setCredits} onNavigate={setActiveRoute} />;
       case AppRoute.ADMIN: return <AdminDashboard />;
+      case AppRoute.CALENDAR_EXPERT: return <CalendarExpert />;
       default: return <Dashboard credits={credits} />;
     }
   };
