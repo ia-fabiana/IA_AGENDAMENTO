@@ -190,6 +190,35 @@ You now have:
 
 ## Troubleshooting
 
+### "Banco de Dados Offline" Error
+
+If you see the message **"Banco de Dados Offline - Não foi possível estabelecer conexão com o cluster de dados Supabase"**, follow these steps:
+
+1. **Create a `.env` file** in the project root:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure your Supabase credentials** in the `.env` file:
+   ```env
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
+
+3. **Get your credentials from Supabase**:
+   - Go to [Supabase Dashboard](https://app.supabase.com/)
+   - Select your project (or create a new one)
+   - Go to **Project Settings** > **API**
+   - Copy the **Project URL** to `VITE_SUPABASE_URL`
+   - Copy the **anon/public** key to `VITE_SUPABASE_ANON_KEY`
+
+4. **Restart the application**:
+   ```bash
+   npm run dev
+   ```
+
+✅ The error should now be resolved!
+
 ### "Encryption key not set"
 Generate and set `ENCRYPTION_KEY` in `.env`:
 ```bash
@@ -200,7 +229,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 Double-check `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
 
 ### "Database connection failed"
-Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct
+Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct and not using placeholder values from `.env.example`
 
 ### Port already in use
 Change `SERVER_PORT=3001` to a different port in `.env`
