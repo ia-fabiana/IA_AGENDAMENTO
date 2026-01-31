@@ -6,7 +6,8 @@ const getEnvVar = (key: string): string => {
   if (typeof process !== 'undefined' && process.env) {
     return process.env[key] || '';
   }
-  // @ts-ignore - import.meta.env is available in Vite but not in Node.js
+  // In Vite environment, import.meta.env is available
+  // @ts-expect-error - import.meta.env exists in Vite but not in Node.js type definitions
   return import.meta?.env?.[key] || '';
 };
 

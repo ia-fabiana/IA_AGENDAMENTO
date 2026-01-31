@@ -15,7 +15,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ appointments }) => {
   const [isCalendarConnected, setIsCalendarConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
-  const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Check Google Calendar connection status on mount
@@ -28,11 +27,6 @@ const Appointments: React.FC<AppointmentsProps> = ({ appointments }) => {
       const config = await dbService.getBusinessConfig(TENANT_ID);
       if (config) {
         setIsCalendarConnected(config.googleCalendarSyncEnabled || false);
-        // Try to get last sync time from database
-        const token = await dbService.getGoogleCalendarToken(TENANT_ID);
-        if (token) {
-          setConnectedEmail('agenda.negocio@gmail.com'); // This could be fetched from the backend
-        }
       }
     } catch (error) {
       console.error('Failed to check calendar connection:', error);
