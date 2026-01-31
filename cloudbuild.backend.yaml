@@ -1,0 +1,71 @@
+steps:
+  # Step 1: Install dependencies
+  - name: 'node:18'
+    entrypoint: npm
+    args: ['install']
+    
+  # Step 2: Build TypeScript backend
+  - name: 'node:18'
+    entrypoint: npm
+    args: ['run', 'build:server']
+    env:
+      - 'GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID}'
+      - 'GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET}'
+      - 'GOOGLE_REDIRECT_URI=${_GOOGLE_REDIRECT_URI}'
+      - 'ENCRYPTION_KEY=${_ENCRYPTION_KEY}'
+      - 'VITE_SUPABASE_URL=${_SUPABASE_URL}'
+      - 'VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY}'
+      - 'NODE_ENV=production'
+    
+  # Step 3: Build Docker image for backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.backend'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ia-agendamentos-backend:$BUILD_ID'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ia-agendamentos-backend:latest'
+      - '.'
+      
+  # Step 4: Push image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/ia-agendamentos-backend:latest'
+      
+  # Step 5: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gke-deploy'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ia-agendamentos-backend'
+      - '--filename=.'
+      - '--image=gcr.io/$PROJECT_ID/ia-agendamentos-backend:latest'
+      - '--location=us-central1'
+      - '--platform=managed'
+      - '--region=us-central1'
+      - '--service-account=ia-agendamentos-backend@ia-agendamentos.iam.gserviceaccount.com'
+      - '--set-env-vars=GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${_GOOGLE_CLIENT_SECRET},GOOGLE_REDIRECT_URI=${_GOOGLE_REDIRECT_URI},ENCRYPTION_KEY=${_ENCRYPTION_KEY},VITE_SUPABASE_URL=${_SUPABASE_URL},VITE_SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},FRONTEND_URL=https://ia-agendamentos-870139342019.us-central1.run.app,NODE_ENV=production'
+
+# Environment variables (secrets) - must be set in Cloud Build UI or using gcloud
+substitutions:
+  _GOOGLE_CLIENT_ID: ''
+  _GOOGLE_CLIENT_SECRET: ''
+  _GOOGLE_REDIRECT_URI: ''
+  _ENCRYPTION_KEY: ''
+  _SUPABASE_URL: ''
+  _SUPABASE_ANON_KEY: ''
+
+# Options
+options:
+  machineType: 'N1_HIGHCPU_8'
+  
+# Timeout for the build
+timeout: '1800s'
+
+# Images to be pushed to the registry
+images:
+  - 'gcr.io/$PROJECT_ID/ia-agendamentos-backend:$BUILD_ID'
+  - 'gcr.io/$PROJECT_ID/ia-agendamentos-backend:latest'
