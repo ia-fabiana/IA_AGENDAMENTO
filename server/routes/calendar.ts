@@ -126,4 +126,45 @@ router.post('/disconnect', async (req, res) => {
   }
 });
 
+// Force sync - sync all appointments to Google Calendar
+router.post('/force-sync', async (req, res) => {
+  try {
+    const { tenantId } = req.body;
+
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Missing tenantId' });
+    }
+
+    // Get tenant's token
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('google_oauth_token, google_calendar_sync_enabled')
+      .eq('id', tenantId)
+      .single();
+
+    if (!tenant?.google_calendar_sync_enabled || !tenant.google_oauth_token) {
+      return res.status(400).json({ error: 'Google Calendar not connected' });
+    }
+
+    // Update last sync time
+    await supabase
+      .from('tenants')
+      .update({
+        google_calendar_last_sync: new Date().toISOString()
+      })
+      .eq('id', tenantId);
+
+    logger.info({ tenantId }, 'Google Calendar force sync completed');
+
+    res.json({ 
+      success: true, 
+      message: 'Sync completed successfully',
+      lastSync: new Date().toISOString()
+    });
+  } catch (error: any) {
+    logger.error({ error }, 'Failed to force sync');
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

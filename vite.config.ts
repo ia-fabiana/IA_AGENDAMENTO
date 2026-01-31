@@ -19,6 +19,14 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      build: {
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html'),
+            oauth2callback: path.resolve(__dirname, 'oauth2callback.html'),
+          }
+        }
+      },
       test: {
         globals: true,
         environment: 'happy-dom',
