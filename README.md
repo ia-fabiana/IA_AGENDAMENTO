@@ -19,8 +19,15 @@ View your app in AI Studio: https://ai.studio/apps/drive/1kAeFkfoyjjXABDmDwPHcZz
 ### Option A: Automated Setup (Recommended)
 
 Run the setup script to get started quickly:
+
+**Linux/Mac:**
 ```bash
 ./setup.sh
+```
+
+**Windows:**
+```cmd
+setup.bat
 ```
 
 This will create your `.env` file and guide you through the configuration steps.
