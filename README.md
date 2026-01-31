@@ -15,9 +15,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/1kAeFkfoyjjXABDmDwPHcZz
 
 1. Install dependencies:
    `npm install`
-2. Copy `.env.example` to `.env.local`
-3. Set the `VITE_GEMINI_API_KEY` in `.env.local` to your Gemini API key
-4. Set the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local`
-5. (Optional) Set `VITE_EVOLUTION_API_URL` and `VITE_EVOLUTION_API_KEY` to enable WhatsApp connection
+2. Copy `.env.example` to `.env.local` (required)
+3. Set the `VITE_GEMINI_API_KEY` in `.env.local` to your Gemini API key (required for AI chat)
+4. Set the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env.local` (required for data sync)
+5. Set `VITE_EVOLUTION_API_URL` and `VITE_EVOLUTION_API_KEY` to enable WhatsApp connection (optional)
 6. Run the app:
    `npm run dev`

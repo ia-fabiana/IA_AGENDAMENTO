@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
-    const geminiKey = env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || '';
+    const geminiKey = env.VITE_GEMINI_API_KEY || '';
     const supabaseUrl = env.VITE_SUPABASE_URL || '';
     const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
     const evolutionApiUrl = env.VITE_EVOLUTION_API_URL || '';
