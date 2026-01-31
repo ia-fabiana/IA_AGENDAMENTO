@@ -57,11 +57,11 @@ const App: React.FC = () => {
       if (dbConfig) setConfig(dbConfig);
       if (dbServices.length > 0) setServices(dbServices);
       setAppointments(dbAppointments.data);
-      setAppointmentsError(dbAppointments.error ? 'Failed to fetch' : null);
+      setAppointmentsError(dbAppointments.error || null);
       setCredits(prev => ({ ...prev, balance: 240 })); 
     } catch (error) {
       console.error("Erro ao sincronizar dados:", error);
-      setAppointmentsError('Failed to fetch');
+      setAppointmentsError(error instanceof Error ? error.message : 'Failed to fetch');
       setDbConnected('offline');
     }
   }, [currentTenantId]);

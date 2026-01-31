@@ -21,7 +21,7 @@ const Appointments: React.FC<AppointmentsProps> = ({ appointments, errorMessage,
             <div>
               <h4 className="text-sm font-bold text-red-600">Erro</h4>
               <p className="text-xs text-slate-500">Failed to fetch</p>
-              <p className="text-xs text-slate-500">Não foi possível carregar a lista de tarefas. Verifique a conexão e tente novamente.</p>
+              <p className="text-xs text-slate-500">Não foi possível carregar a lista de agendamentos. Verifique a conexão e tente novamente.</p>
             </div>
           </div>
           <button
