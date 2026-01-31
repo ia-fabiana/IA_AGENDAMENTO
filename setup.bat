@@ -7,6 +7,15 @@ echo   IA.AGENDAMENTOS - Setup Script
 echo ================================================
 echo.
 
+REM Check if .env.example exists
+if not exist .env.example (
+    echo [ERROR] .env.example file not found
+    echo.
+    echo The .env.example template file is missing from this repository.
+    echo Please ensure you have the complete repository before running setup.
+    exit /b 1
+)
+
 REM Check if .env file exists
 if exist .env (
     echo [OK] .env file already exists
