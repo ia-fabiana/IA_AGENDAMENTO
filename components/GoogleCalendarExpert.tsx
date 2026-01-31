@@ -96,15 +96,47 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
   const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Check if credentials are configured
-      const authUrlResponse = await fetch(`${SERVER_URL}/api/calendar/auth-url`);
-      const canConnect = authUrlResponse.ok;
-      
-      if (canConnect) {
-        updateStepStatus('check-credentials', 'completed');
-      } else {
+      // Warn if using localhost in production
+      if (SERVER_URL.includes('localhost') && window.location.origin.includes('run.app')) {
+        console.warn('⚠️ Calendar Expert: Using localhost server URL in production. Backend may not be deployed yet.');
         updateStepStatus('check-credentials', 'error');
-        setError('Servidor não configurado. Verifique GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
+        setError('❌ Servidor backend não está disponível. O serviço será ativado após o deploy do backend.');
+        setStatus({
+          isConnected: false,
+          lastSync: null,
+          syncEnabled: false,
+          hasToken: false
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if credentials are configured
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const authUrlResponse = await fetch(`${SERVER_URL}/api/calendar/auth-url`, {
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+        
+        const canConnect = authUrlResponse.ok;
+        
+        if (canConnect) {
+          updateStepStatus('check-credentials', 'completed');
+        } else {
+          updateStepStatus('check-credentials', 'error');
+          const errorData = await authUrlResponse.json().catch(() => ({}));
+          setError(errorData.error || 'Servidor não configurado. Verifique GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
+        }
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('Timeout ao conectar ao servidor backend');
+        }
+        throw fetchErr;
       }
 
       // Check tenant connection status
@@ -118,8 +150,13 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
       });
     } catch (err: any) {
       console.error('Failed to check connection status:', err);
-      setError('Erro ao verificar status da conexão');
       updateStepStatus('check-credentials', 'error');
+      
+      if (err.message.includes('Failed to fetch') || err.message.includes('Timeout')) {
+        setError('⚠️ Não foi possível conectar ao servidor backend. Verifique se está em execução.');
+      } else {
+        setError('Erro ao verificar status da conexão: ' + err.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -137,16 +174,37 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
     connectionCompletedRef.current = false;
     
     try {
+      // Warn if using localhost in production
+      if (SERVER_URL.includes('localhost') && window.location.origin.includes('run.app')) {
+        throw new Error('Servidor backend não está disponível em produção. Por favor, aguarde o deploy do backend.');
+      }
+
       // Step 1: Check credentials
       updateStepStatus('check-credentials', 'in-progress');
-      const authUrlResponse = await fetch(`${SERVER_URL}/api/calendar/auth-url`);
       
-      if (!authUrlResponse.ok) {
-        throw new Error('Falha ao obter URL de autorização');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      try {
+        const authUrlResponse = await fetch(`${SERVER_URL}/api/calendar/auth-url`, {
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        clearTimeout(timeoutId);
+        
+        if (!authUrlResponse.ok) {
+          throw new Error('Falha ao obter URL de autorização');
+        }
+        
+        const { authUrl } = await authUrlResponse.json();
+        updateStepStatus('check-credentials', 'completed');
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('Timeout: servidor backend não respondeu');
+        }
+        throw fetchErr;
       }
-      
-      const { authUrl } = await authUrlResponse.json();
-      updateStepStatus('check-credentials', 'completed');
       
       // Step 2: Authorize
       updateStepStatus('authorize', 'in-progress');
