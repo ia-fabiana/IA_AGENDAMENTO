@@ -1,8 +1,18 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Support both Vite (import.meta.env) and Node.js (process.env) environments
+const getEnvVar = (key: string): string => {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key] || '';
+  }
+  // In Vite environment, import.meta.env is available
+  // @ts-expect-error - import.meta.env exists in Vite but not in Node.js type definitions
+  return import.meta?.env?.[key] || '';
+};
+
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL');
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY');
 
 // Check if credentials are properly configured (not placeholder values)
 const isValidUrl = supabaseUrl && supabaseUrl.startsWith('https://') && supabaseUrl !== 'https://your-project.supabase.co';

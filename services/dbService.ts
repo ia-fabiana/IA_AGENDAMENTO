@@ -34,6 +34,8 @@ export const dbService = {
       openingHours: data.horario_funcionamento || '',
       cancellationPolicy: data.politica_cancelamento || '',
       minAdvanceTime: data.antecedencia_minima || 2,
+      googleCalendarId: data.google_calendar_id || undefined,
+      googleCalendarSyncEnabled: data.google_calendar_sync_enabled || false,
       promotion: data.config_promocao || { enabled: false, description: '', callToAction: '' }
     };
   },
