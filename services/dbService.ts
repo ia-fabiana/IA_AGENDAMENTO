@@ -8,10 +8,9 @@ export const dbService = {
     try {
       const { data, error } = await supabase.from('tenants').select('id').limit(1);
       if (error) throw error;
-      console.log('Database connection successful');
       return true;
     } catch (e) {
-      console.error('Database connection failed:', e);
+      console.error("Erro de conexão Supabase:", e);
       return false;
     }
   },
@@ -34,8 +33,6 @@ export const dbService = {
       openingHours: data.horario_funcionamento || '',
       cancellationPolicy: data.politica_cancelamento || '',
       minAdvanceTime: data.antecedencia_minima || 2,
-      googleCalendarId: data.google_calendar_id || undefined,
-      googleCalendarSyncEnabled: data.google_calendar_sync_enabled || false,
       promotion: data.config_promocao || { enabled: false, description: '', callToAction: '' }
     };
   },
@@ -91,78 +88,17 @@ export const dbService = {
     })) || [];
   },
 
-  async createAppointment(apt: Appointment, googleCalendarEventId?: string) {
-    try {
-      // Save appointment to database
-      // Google Calendar integration should be handled by backend API
-      const result = await supabase.from('agendamentos').insert({
-        id: apt.id,
-        tenant_id: apt.tenantId,
-        cliente_nome: apt.customerName,
-        cliente_fone: apt.phoneNumber,
-        servico_id: apt.serviceId,
-        servico_nome: apt.serviceName,
-        data_hora: apt.date,
-        status: apt.status,
-        valor: apt.value,
-        google_calendar_event_id: googleCalendarEventId || null,
-        google_calendar_synced: !!googleCalendarEventId,
-        google_calendar_sync_error: null
-      });
-
-      if (result.error) {
-        console.error('Failed to save appointment to database:', result.error);
-        throw result.error;
-      }
-
-      console.log('Appointment created:', apt.id);
-
-      return result;
-    } catch (error) {
-      console.error('Error in createAppointment:', error);
-      throw error;
-    }
-  },
-
-  // Get Google Calendar token for tenant
-  async getGoogleCalendarToken(tenantId: string): Promise<string | null> {
-    try {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('google_oauth_token, google_calendar_sync_enabled')
-        .eq('id', tenantId)
-        .single();
-
-      if (error || !data || !data.google_calendar_sync_enabled) {
-        return null;
-      }
-
-      return data.google_oauth_token;
-    } catch (error) {
-      console.error('Failed to get Google Calendar token:', error);
-      return null;
-    }
-  },
-
-  // Save Google Calendar token for tenant
-  async saveGoogleCalendarToken(tenantId: string, encryptedToken: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('tenants')
-        .update({
-          google_oauth_token: encryptedToken,
-          google_calendar_sync_enabled: true,
-          google_calendar_last_sync: new Date().toISOString()
-        })
-        .eq('id', tenantId);
-
-      if (error) throw error;
-
-      console.log('Google Calendar token saved for tenant:', tenantId);
-      return true;
-    } catch (error) {
-      console.error('Failed to save Google Calendar token:', error);
-      return false;
-    }
+  async createAppointment(apt: Appointment) {
+    return await supabase.from('agendamentos').insert({
+      id: apt.id,
+      tenant_id: apt.tenantId,
+      cliente_nome: apt.customerName,
+      cliente_fone: apt.phoneNumber,
+      servico_id: apt.serviceId,
+      servico_nome: apt.serviceName,
+      data_hora: apt.date,
+      status: apt.status,
+      valor: apt.value
+    });
   }
 };

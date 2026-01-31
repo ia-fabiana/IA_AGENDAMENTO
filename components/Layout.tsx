@@ -17,8 +17,7 @@ import {
   Globe,
   Key,
   Database,
-  Cloud,
-  Sparkles
+  CloudZap
 } from 'lucide-react';
 import { AppRoute, AIProvider, UserCredits } from '../types';
 
@@ -51,7 +50,6 @@ const Layout: React.FC<LayoutProps> = ({
     { id: AppRoute.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
     { id: AppRoute.AGENTS, label: 'Agentes IA', icon: Cpu },
     { id: AppRoute.APPOINTMENTS, label: 'Agendamentos', icon: Calendar },
-    { id: AppRoute.CALENDAR_EXPERT, label: 'Especialista Calendar', icon: Sparkles },
     { id: AppRoute.TRAINING, label: 'Painel de Treino', icon: Settings },
     { id: AppRoute.CONNECTIONS, label: 'Conexões', icon: LinkIcon },
     { id: AppRoute.CHAT_MONITOR, label: 'Monitoramento', icon: Activity },
@@ -168,7 +166,7 @@ const Layout: React.FC<LayoutProps> = ({
           {/* Badge de Ambiente para o Lojista */}
           {!isAdmin && (
             <div className="mb-4 px-4 py-3 bg-brand-green/5 rounded-2xl border border-brand-green/10 flex items-center gap-3">
-               <Cloud className="w-4 h-4 text-brand-green" />
+               <CloudZap className="w-4 h-4 text-brand-green" />
                <div>
                   <p className="text-[9px] font-black text-brand-green uppercase tracking-widest">Produção Ativa</p>
                   <p className="text-[8px] text-slate-500 font-bold">Ambiente Criptografado</p>

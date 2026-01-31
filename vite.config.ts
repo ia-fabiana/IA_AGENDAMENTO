@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 5173,
+        port: 3000,
         host: '0.0.0.0',
       },
       plugins: [react()],
@@ -17,32 +17,6 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
-        }
-      },
-      build: {
-        rollupOptions: {
-          input: {
-            main: path.resolve(__dirname, 'index.html'),
-            oauth2callback: path.resolve(__dirname, 'oauth2callback.html'),
-          }
-        }
-      },
-      test: {
-        globals: true,
-        environment: 'happy-dom',
-        setupFiles: ['./test/setup.ts'],
-        coverage: {
-          provider: 'v8',
-          reporter: ['text', 'json', 'html'],
-          exclude: [
-            'node_modules/',
-            'test/',
-            '*.config.ts',
-            'dist/',
-            'migrations/',
-            'views/',
-            'components/',
-          ]
         }
       }
     };

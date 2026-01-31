@@ -2,137 +2,19 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# IA Agendamento - Gestão Inteligente
+# Run and deploy your AI Studio app
 
-Sistema de agendamento inteligente com integração ao Supabase e Google Calendar.
+This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1kAeFkfoyjjXABDmDwPHcZzjpnSS-wHZO
 
-## Prerequisites
+## Run Locally
 
-- Node.js 18+ (tested with 18.x and 20.x)
-- Conta Supabase (gratuita)
-- Conta Google Cloud (para integração com Calendar - opcional)
+**Prerequisites:**  Node.js
 
-## Quick Start
 
-### Option A: Automated Setup (Recommended)
-
-Run the setup script to get started quickly:
-
-**Linux/Mac:**
-```bash
-./setup.sh
-```
-
-**Windows:**
-```cmd
-setup.bat
-```
-
-This will create your `.env` file and guide you through the configuration steps.
-
-### Option B: Manual Setup
-
-### 1. Install dependencies
-```bash
-npm install
-```
-
-### 2. Configure Environment Variables
-
-Create a `.env` file in the root of the project:
-```bash
-cp .env.example .env
-```
-
-Edit the `.env` file and configure your credentials:
-
-```env
-# Supabase Configuration (REQUIRED)
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-
-# Google Gemini API
-# Note: Both variables should have the same value (GEMINI_API_KEY is mapped to API_KEY at build time)
-GEMINI_API_KEY=your_gemini_api_key_here
-API_KEY=your_gemini_api_key_here
-
-# Google Calendar OAuth (Optional)
-GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:5173/oauth2callback
-
-# Encryption (Required for production)
-ENCRYPTION_KEY=your-secure-encryption-key-here-minimum-32-characters-long
-```
-
-#### How to get Supabase credentials:
-1. Go to [Supabase Dashboard](https://app.supabase.com/)
-2. Create a new project or select an existing one
-3. Go to Project Settings > API
-4. Copy the **Project URL** to `VITE_SUPABASE_URL`
-5. Copy the **anon/public** key to `VITE_SUPABASE_ANON_KEY`
-
-### 3. Setup Database
-
-Run the database migrations in your Supabase SQL Editor:
-
-1. Go to your [Supabase Dashboard](https://app.supabase.com/)
-2. Select your project
-3. Go to **SQL Editor** in the left sidebar
-4. Click **New Query**
-5. Copy the contents of `migrations/sprint2_rbac_calendar.sql`
-6. Paste into the SQL editor
-7. Click **Run** or press `Ctrl+Enter`
-
-This will create the necessary tables for tenants, users, roles, permissions, appointments, and services.
-
-### 4. Run the Application
-
-```bash
-# Frontend only
-npm run dev
-
-# Backend only (for Google Calendar integration)
-npm run dev:server
-
-# Both together
-npm run dev:all
-```
-
-The app will be available at: http://localhost:5173
-
-## Troubleshooting
-
-### "Banco de Dados Offline" Error
-
-If you see this error message, it means the Supabase connection is not configured:
-
-1. **Create `.env` file**: Copy `.env.example` to `.env` in the project root
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Configure Supabase credentials**: Edit `.env` and add your credentials:
-   - `VITE_SUPABASE_URL`: Your Supabase project URL (from Project Settings > API)
-   - `VITE_SUPABASE_ANON_KEY`: Your anon/public key (from Project Settings > API)
-   - **Important**: Use real credentials, not the placeholder values from `.env.example`
-
-3. **Restart the application**: The environment variables are loaded at build time
-   ```bash
-   npm run dev
-   ```
-
-**Note**: After changing environment variables, you must restart the development server for changes to take effect.
-
-### Need Help?
-
-For detailed setup instructions, see [QUICKSTART.md](./QUICKSTART.md)
-
-## Documentation
-
-- 📚 [Quick Start Guide](./QUICKSTART.md) - Get started in 15 minutes
-- 🔧 [Server Documentation](./SERVER_README.md) - Backend API details
-- 🏗️ [Architecture](./BACKEND_ARCHITECTURE.md) - System architecture
-- 🚀 [Deployment Guide](./DEPLOYMENT.md) - Deploy to production
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
