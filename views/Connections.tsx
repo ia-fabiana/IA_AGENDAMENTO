@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { evolutionService } from '../services/evolutionService';
+import { evolutionService, evolutionApiKey } from '../services/evolutionService';
 import { dbService } from '../services/dbService';
 import { Instance, BusinessConfig } from '../types';
 
@@ -44,7 +44,7 @@ const Connections: React.FC<ConnectionsProps> = ({
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [errorStatus, setErrorStatus] = useState<'none' | 'protocol' | 'generic'>('none');
+  const [errorStatus, setErrorStatus] = useState<'none' | 'protocol' | 'missing-key' | 'generic'>('none');
   const [connectedNumber, setConnectedNumber] = useState<string | null>(null);
   const qrPollInterval = useRef<any>(null);
   
@@ -70,6 +70,12 @@ const Connections: React.FC<ConnectionsProps> = ({
     setQrCode(null);
     
     try {
+      if (!evolutionApiKey) {
+        setErrorStatus('missing-key');
+        setLoading(false);
+        return;
+      }
+
       const newInst = await evolutionService.createInstance(businessName);
       setInstance(newInst);
       
@@ -306,6 +312,14 @@ const Connections: React.FC<ConnectionsProps> = ({
                          </div>
                          <p className="text-[11px] font-bold text-slate-500 leading-tight italic">Preparando túnel de comunicação segura...</p>
                          <p className="text-[9px] text-slate-400 uppercase font-black">Isso pode levar até 30 segundos.</p>
+                      </div>
+                    ) : errorStatus === 'missing-key' ? (
+                      <div className="text-center space-y-4 px-4">
+                         <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
+                            <AlertTriangle className="w-8 h-8 text-amber-500" />
+                         </div>
+                         <p className="text-[11px] font-bold text-slate-500 leading-tight italic">Chave da Evolution API não configurada.</p>
+                         <p className="text-[9px] text-slate-400 uppercase font-black">Atualize a configuração de ambiente para continuar.</p>
                       </div>
                     ) : (
                       <div className="text-center p-4 space-y-2">
