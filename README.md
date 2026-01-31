@@ -10,9 +10,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/1kAeFkfoyjjXABDmDwPHcZz
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 18+ (tested with 18.x and 20.x)
 - Conta Supabase (gratuita)
-- Conta Google Cloud (para integração com Calendar)
+- Conta Google Cloud (para integração com Calendar - opcional)
 
 ## Quick Start
 
@@ -36,6 +36,7 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # Google Gemini API
+# Note: Both variables should have the same value (GEMINI_API_KEY is mapped to API_KEY at build time)
 GEMINI_API_KEY=your_gemini_api_key_here
 API_KEY=your_gemini_api_key_here
 
@@ -58,9 +59,16 @@ ENCRYPTION_KEY=your-secure-encryption-key-here-minimum-32-characters-long
 ### 3. Setup Database
 
 Run the database migrations in your Supabase SQL Editor:
-```sql
--- See migrations/sprint2_rbac_calendar.sql
-```
+
+1. Go to your [Supabase Dashboard](https://app.supabase.com/)
+2. Select your project
+3. Go to **SQL Editor** in the left sidebar
+4. Click **New Query**
+5. Copy the contents of `migrations/sprint2_rbac_calendar.sql`
+6. Paste into the SQL editor
+7. Click **Run** or press `Ctrl+Enter`
+
+This will create the necessary tables for tenants, users, roles, permissions, appointments, and services.
 
 ### 4. Run the Application
 
