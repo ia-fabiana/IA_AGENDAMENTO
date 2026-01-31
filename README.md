@@ -109,10 +109,22 @@ The app will be available at: http://localhost:5173
 
 If you see this error message, it means the Supabase connection is not configured:
 
-1. Verify that `.env` file exists in the project root
-2. Check that `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set correctly
-3. Ensure the values are not the placeholder values from `.env.example`
-4. Restart the application after making changes
+1. **Create `.env` file**: Copy `.env.example` to `.env` in the project root
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure Supabase credentials**: Edit `.env` and add your credentials:
+   - `VITE_SUPABASE_URL`: Your Supabase project URL (from Project Settings > API)
+   - `VITE_SUPABASE_ANON_KEY`: Your anon/public key (from Project Settings > API)
+   - **Important**: Use real credentials, not the placeholder values from `.env.example`
+
+3. **Restart the application**: The environment variables are loaded at build time
+   ```bash
+   npm run dev
+   ```
+
+**Note**: After changing environment variables, you must restart the development server for changes to take effect.
 
 ### Need Help?
 
