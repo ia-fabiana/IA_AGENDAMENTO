@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calendar, 
   CheckCircle, 
@@ -36,6 +36,8 @@ interface SetupStep {
 }
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+const OAUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const SYNC_ENABLE_DELAY_MS = 500; // 0.5 seconds
 
 export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({ 
   tenantId,
@@ -84,9 +86,9 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
 
   useEffect(() => {
     checkConnectionStatus();
-  }, []);
+  }, [checkConnectionStatus]);
 
-  const checkConnectionStatus = async () => {
+  const checkConnectionStatus = useCallback(async () => {
     setIsLoading(true);
     try {
       // Check if credentials are configured
@@ -116,7 +118,7 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const updateStepStatus = (stepId: string, status: SetupStep['status']) => {
     setSetupSteps(prev => prev.map(step => 
@@ -183,7 +185,7 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
           
           // Step 4: Enable sync
           updateStepStatus('enable-sync', 'in-progress');
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, SYNC_ENABLE_DELAY_MS));
           updateStepStatus('enable-sync', 'completed');
           
           // Update status
@@ -207,15 +209,29 @@ export const GoogleCalendarExpert: React.FC<GoogleCalendarExpertProps> = ({
 
       window.addEventListener('message', handleMessage);
       
-      // Timeout for popup
-      setTimeout(() => {
+      // Timeout for popup - use closure to check popup state
+      const timeoutId = setTimeout(() => {
+        // Check if popup is still open or connection not completed
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        window.removeEventListener('message', handleMessage);
+        // Only show error if still in connecting state
         if (isConnecting) {
-          window.removeEventListener('message', handleMessage);
           updateStepStatus('authorize', 'error');
           setError('Timeout: Autorização não completada');
           setIsConnecting(false);
         }
-      }, 300000); // 5 minutes timeout
+      }, OAUTH_TIMEOUT_MS);
+      
+      // Cleanup timeout if connection succeeds before timeout
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('message', handleMessage);
+      };
+      
+      // Store cleanup reference for potential early completion
+      (handleMessage as any).cleanup = cleanup;
       
     } catch (err: any) {
       console.error('Connection failed:', err);

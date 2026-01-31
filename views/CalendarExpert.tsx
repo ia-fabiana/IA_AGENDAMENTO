@@ -1,10 +1,14 @@
 import React from 'react';
 import { GoogleCalendarExpert } from '../components/GoogleCalendarExpert';
 
-// This would normally come from context or props
-const TENANT_ID = '550e8400-e29b-41d4-a716-446655440000';
+interface CalendarExpertProps {
+  tenantId?: string;
+}
 
-export const CalendarExpert: React.FC = () => {
+// Default tenant ID for demo purposes - in production, this should come from user context/auth
+const DEFAULT_TENANT_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+export const CalendarExpert: React.FC<CalendarExpertProps> = ({ tenantId = DEFAULT_TENANT_ID }) => {
   const handleConnectionSuccess = () => {
     console.log('Google Calendar connected successfully!');
     // Could trigger analytics, notifications, etc.
@@ -13,7 +17,7 @@ export const CalendarExpert: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <GoogleCalendarExpert 
-        tenantId={TENANT_ID}
+        tenantId={tenantId}
         onConnectionSuccess={handleConnectionSuccess}
       />
     </div>
