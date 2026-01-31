@@ -17,21 +17,21 @@ if [ ! -f .env.example ]; then
     exit 1
 fi
 
-# Check if .env file exists
-if [ -f .env ]; then
-    echo "✓ .env file already exists"
+# Check if .env.local file exists
+if [ -f .env.local ]; then
+    echo "✓ .env.local file already exists"
     echo ""
-    echo "If you need to reconfigure, please edit the .env file manually"
+    echo "If you need to reconfigure, please edit the .env.local file manually"
     echo "or delete it and run this script again."
     exit 0
 fi
 
-# Create .env from .env.example
-echo "Creating .env file from .env.example..."
-cp .env.example .env
+# Create .env.local from .env.example
+echo "Creating .env.local file from .env.example..."
+cp .env.example .env.local
 
 if [ $? -eq 0 ]; then
-    echo "✓ .env file created successfully!"
+    echo "✓ .env.local file created successfully!"
     echo ""
     echo "================================================"
     echo "  NEXT STEPS - Configure your credentials"
@@ -43,12 +43,12 @@ if [ $? -eq 0 ]; then
     echo "   - Go to Project Settings > API"
     echo "   - Copy the Project URL and anon/public key"
     echo ""
-    echo "2. Edit the .env file and update:"
+    echo "2. Edit the .env.local file and update:"
     echo "   - VITE_SUPABASE_URL=<your-project-url>"
     echo "   - VITE_SUPABASE_ANON_KEY=<your-anon-key>"
     echo ""
-    echo "3. (Optional) Configure other services:"
-    echo "   - Google Gemini API key for AI features"
+    echo "3. Configure the Gemini API key for AI features:"
+    echo "   - VITE_GEMINI_API_KEY=<your-gemini-api-key>"
     echo "   - Google Calendar OAuth for calendar sync"
     echo ""
     echo "4. Install dependencies:"
@@ -61,7 +61,7 @@ if [ $? -eq 0 ]; then
     echo "For detailed instructions, see QUICKSTART.md"
     echo "================================================"
 else
-    echo "✗ Failed to create .env file"
-    echo "Please create it manually: cp .env.example .env"
+    echo "✗ Failed to create .env.local file"
+    echo "Please create it manually: cp .env.example .env.local"
     exit 1
 fi

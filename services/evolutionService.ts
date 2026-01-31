@@ -6,8 +6,8 @@ import { Instance } from '../types';
  * Configurado para o domínio seguro https://api.iafabiana.com.br
  */
 
-export const EVOLUTION_API_URL = 'https://api.iafabiana.com.br';
-export const EVOLUTION_API_KEY = 'B6WWCSGQ-6SJAIRO-PJSJAS90-VNGZIR3J'; 
+export const EVOLUTION_API_URL = process.env.VITE_EVOLUTION_API_URL || 'https://api.iafabiana.com.br';
+export const EVOLUTION_API_KEY = process.env.VITE_EVOLUTION_API_KEY || ''; 
 
 export const evolutionService = {
   formatInstanceName: (businessName: string) => {

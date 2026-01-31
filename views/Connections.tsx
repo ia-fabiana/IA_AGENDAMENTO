@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from 'lucide-react';
-import { evolutionService } from '../services/evolutionService';
+import { evolutionService, EVOLUTION_API_KEY } from '../services/evolutionService';
 import { dbService } from '../services/dbService';
 import { Instance, BusinessConfig } from '../types';
 
@@ -70,6 +70,12 @@ const Connections: React.FC<ConnectionsProps> = ({
     setQrCode(null);
     
     try {
+      if (!EVOLUTION_API_KEY) {
+        setErrorStatus('generic');
+        setLoading(false);
+        return;
+      }
+
       const newInst = await evolutionService.createInstance(businessName);
       setInstance(newInst);
       
