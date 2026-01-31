@@ -19,6 +19,7 @@ const App: React.FC = () => {
   const [dbConnected, setDbConnected] = useState<'checking' | 'online' | 'offline'>('checking');
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [isLoading, setIsLoading] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState<string | null>(null);
   
   const currentTenantId = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -55,10 +56,12 @@ const App: React.FC = () => {
 
       if (dbConfig) setConfig(dbConfig);
       if (dbServices.length > 0) setServices(dbServices);
-      setAppointments(dbAppointments);
+      setAppointments(dbAppointments.data);
+      setAppointmentsError(dbAppointments.error ? 'Failed to fetch' : null);
       setCredits(prev => ({ ...prev, balance: 240 })); 
     } catch (error) {
       console.error("Erro ao sincronizar dados:", error);
+      setAppointmentsError('Failed to fetch');
       setDbConnected('offline');
     }
   }, [currentTenantId]);
@@ -88,7 +91,7 @@ const App: React.FC = () => {
       </div>
     );
 
-    if (dbConnected === 'offline') {
+    if (dbConnected === 'offline' && activeRoute !== AppRoute.APPOINTMENTS) {
       return (
         <div className="flex h-screen flex-col items-center justify-center bg-slate-50 p-10">
           <div className="bg-white p-12 rounded-[4rem] border border-slate-200 shadow-2xl text-center max-w-md space-y-8 animate-in zoom-in">
@@ -110,7 +113,13 @@ const App: React.FC = () => {
     switch (activeRoute) {
       case AppRoute.DASHBOARD: return <Dashboard credits={credits} />;
       case AppRoute.AGENTS: return <Agents config={aiConfig} onSave={setAiConfig} credits={credits} />;
-      case AppRoute.APPOINTMENTS: return <Appointments appointments={appointments} />;
+      case AppRoute.APPOINTMENTS: return (
+        <Appointments
+          appointments={appointments}
+          errorMessage={appointmentsError}
+          onDismissError={() => setAppointmentsError(null)}
+        />
+      );
       case AppRoute.TRAINING: return <Training config={config} setConfig={handleUpdateConfig} services={services} setServices={handleSaveServices} />;
       case AppRoute.CONNECTIONS: 
         return (

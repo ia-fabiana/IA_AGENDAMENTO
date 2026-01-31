@@ -5,11 +5,33 @@ import { Appointment } from '../types';
 
 interface AppointmentsProps {
   appointments: Appointment[];
+  errorMessage?: string | null;
+  onDismissError?: () => void;
 }
 
-const Appointments: React.FC<AppointmentsProps> = ({ appointments }) => {
+const Appointments: React.FC<AppointmentsProps> = ({ appointments, errorMessage, onDismissError }) => {
   return (
     <div className="space-y-8">
+      {errorMessage && (
+        <div className="bg-white p-6 rounded-2xl border border-red-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-red-600">Erro</h4>
+              <p className="text-xs text-slate-500">Failed to fetch</p>
+              <p className="text-xs text-slate-500">Não foi possível carregar a lista de tarefas. Verifique a conexão e tente novamente.</p>
+            </div>
+          </div>
+          <button
+            onClick={onDismissError}
+            className="text-[10px] font-black uppercase tracking-widest text-red-600 hover:text-red-700"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
       {/* Header & Sync Status */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">

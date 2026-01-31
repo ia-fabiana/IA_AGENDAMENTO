@@ -68,24 +68,36 @@ export const dbService = {
   },
 
   // Agendamentos
-  async getAppointments(tenantId: string): Promise<Appointment[]> {
-    const { data, error } = await supabase
-      .from('agendamentos')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('data_hora', { ascending: true });
-    
-    return data?.map(d => ({
-      id: d.id,
-      tenantId: d.tenant_id,
-      customerName: d.cliente_nome,
-      phoneNumber: d.cliente_fone,
-      serviceId: d.servico_id,
-      serviceName: d.servico_nome,
-      date: d.data_hora,
-      status: d.status,
-      value: d.valor
-    })) || [];
+  async getAppointments(tenantId: string): Promise<{ data: Appointment[]; error?: string }> {
+    try {
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('data_hora', { ascending: true });
+      
+      if (error) {
+        console.error("Erro ao buscar agendamentos:", error);
+        return { data: [], error: error.message };
+      }
+  
+      return {
+        data: data?.map(d => ({
+          id: d.id,
+          tenantId: d.tenant_id,
+          customerName: d.cliente_nome,
+          phoneNumber: d.cliente_fone,
+          serviceId: d.servico_id,
+          serviceName: d.servico_nome,
+          date: d.data_hora,
+          status: d.status,
+          value: d.valor
+        })) || []
+      };
+    } catch (error: any) {
+      console.error("Erro ao buscar agendamentos:", error);
+      return { data: [], error: error?.message || 'Erro desconhecido' };
+    }
   },
 
   async createAppointment(apt: Appointment) {
